@@ -4,6 +4,7 @@ import { CheckSquare, MessageSquare, Paperclip } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { PRIORITY_CLASSES, PRIORITY_LABELS } from '../priority'
 import type { KanbanCardSummary } from '../types'
@@ -13,6 +14,9 @@ interface KanbanCardPreviewProps {
   card: KanbanCardSummary
   boardId: string
   onOpen: () => void
+  selectMode?: boolean
+  selected?: boolean
+  onToggleSelect?: (cardId: string) => void
 }
 
 function isOverdue(dueDate: string | null): boolean {
@@ -20,7 +24,14 @@ function isOverdue(dueDate: string | null): boolean {
   return new Date(dueDate).getTime() < Date.now()
 }
 
-export function KanbanCardPreview({ card, boardId, onOpen }: KanbanCardPreviewProps) {
+export function KanbanCardPreview({
+  card,
+  boardId,
+  onOpen,
+  selectMode = false,
+  selected = false,
+  onToggleSelect,
+}: KanbanCardPreviewProps) {
   const { data: labels } = useBoardLabels(boardId)
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -39,10 +50,20 @@ export function KanbanCardPreview({ card, boardId, onOpen }: KanbanCardPreviewPr
       onClick={onOpen}
       style={{ transform: CSS.Translate.toString(transform) }}
       className={cn(
-        'cursor-pointer space-y-2 p-3 text-sm transition-shadow hover:shadow-md',
+        'relative cursor-pointer space-y-2 p-3 text-sm transition-shadow hover:shadow-md',
         isDragging && 'opacity-40',
       )}
     >
+      {selectMode && (
+        <div
+          className="absolute right-2 top-2 z-10 rounded bg-background/80 p-0.5"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Checkbox checked={selected} onCheckedChange={() => onToggleSelect?.(card.id)} />
+        </div>
+      )}
+
       {cardLabels.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {cardLabels.map((label) => (

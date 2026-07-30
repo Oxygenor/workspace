@@ -20,6 +20,8 @@ import { Breadcrumbs } from '@/features/workspace-tree/components/Breadcrumbs'
 import { IconPicker } from '@/features/workspace-tree/components/IconPicker'
 import { SectionContentsView } from '@/features/workspace-tree/components/SectionContentsView'
 import { TagPicker } from '@/features/tags/components/TagPicker'
+import { useSaveSectionAsTemplate } from '@/features/templates/hooks'
+import { SaveTemplateDialog } from '@/features/templates/components/SaveTemplateDialog'
 import {
   useArchiveItem,
   useDeleteItem,
@@ -45,10 +47,12 @@ export default function ItemPage() {
   const duplicateItem = useDuplicateItem()
   const archiveItem = useArchiveItem()
   const deleteItem = useDeleteItem()
+  const saveAsTemplate = useSaveSectionAsTemplate()
 
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [draftName, setDraftName] = useState('')
   const [confirmOpen, setConfirmOpen] = useState<'archive' | 'delete' | null>(null)
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
 
   if (isLoading) {
     return (
@@ -153,6 +157,9 @@ export default function ItemPage() {
               >
                 {t.common.duplicate}
               </DropdownMenuItem>
+              {item.type === 'section' && (
+                <DropdownMenuItem onSelect={() => setSaveTemplateOpen(true)}>{t.templates.saveAsTemplate}</DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => setConfirmOpen('archive')}>{t.common.archive}</DropdownMenuItem>
               <DropdownMenuItem
@@ -199,6 +206,18 @@ export default function ItemPage() {
           navigate('/app/home')
         }}
       />
+      {item.type === 'section' && (
+        <SaveTemplateDialog
+          open={saveTemplateOpen}
+          onOpenChange={setSaveTemplateOpen}
+          title={t.templates.saveSectionTitle}
+          defaultName={item.name}
+          isSaving={saveAsTemplate.isPending}
+          onSave={(name) => {
+            saveAsTemplate.mutate({ name, rootItem: item }, { onSuccess: () => setSaveTemplateOpen(false) })
+          }}
+        />
+      )}
     </div>
   )
 }

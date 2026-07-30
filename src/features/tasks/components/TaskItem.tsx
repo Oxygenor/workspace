@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Clock, Plus, Trash2 } from 'lucide-react'
+import { Clock, Inbox, Plus, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -17,9 +17,10 @@ import { t } from '@/i18n'
 import type { PriorityLevel, TaskRow } from '@/types/database'
 import { useCreateTask, useDeleteTask, useUpdateTask } from '../hooks'
 import { AddTaskInput } from './AddTaskInput'
+import { TaskDependencies } from './TaskDependencies'
 import { TaskLabels } from './TaskLabels'
 
-function TaskTimeButton({ taskId }: { taskId: string }) {
+function TaskTimeButton({ taskId, title }: { taskId: string; title: string }) {
   const { data: runningEntry } = useRunningTimer()
   const { data: totalSeconds } = useTotalSecondsForTarget({ taskId })
   const isRunning = runningEntry?.task_id === taskId
@@ -37,7 +38,7 @@ function TaskTimeButton({ taskId }: { taskId: string }) {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80" align="start">
-        <TimeTrackingSection taskId={taskId} />
+        <TimeTrackingSection taskId={taskId} title={title} />
       </PopoverContent>
     </Popover>
   )
@@ -47,9 +48,19 @@ interface TaskItemProps {
   task: TaskRow
   taskListId: string
   subtasks?: TaskRow[]
+  selectMode?: boolean
+  selected?: boolean
+  onToggleSelect?: (taskId: string) => void
 }
 
-export function TaskItem({ task, taskListId, subtasks = [] }: TaskItemProps) {
+export function TaskItem({
+  task,
+  taskListId,
+  subtasks = [],
+  selectMode = false,
+  selected = false,
+  onToggleSelect,
+}: TaskItemProps) {
   const isSubtask = task.parent_task_id !== null
 
   const updateTask = useUpdateTask(taskListId)
@@ -79,6 +90,10 @@ export function TaskItem({ task, taskListId, subtasks = [] }: TaskItemProps) {
   return (
     <div className="space-y-1">
       <div className="group flex flex-wrap items-center gap-2 rounded-md px-1 py-1.5 hover:bg-accent/50">
+        {!isSubtask && selectMode && (
+          <Checkbox checked={selected} onCheckedChange={() => onToggleSelect?.(task.id)} />
+        )}
+
         <Checkbox
           checked={task.completed}
           onCheckedChange={(checked) =>
@@ -151,7 +166,24 @@ export function TaskItem({ task, taskListId, subtasks = [] }: TaskItemProps) {
 
         <TagPicker taskId={task.id} />
 
-        <TaskTimeButton taskId={task.id} />
+        <TaskTimeButton taskId={task.id} title={task.title} />
+
+        <TaskDependencies task={task} taskListId={taskListId} />
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            'h-6 w-6 shrink-0',
+            task.is_someday ? 'text-primary' : 'opacity-0 group-hover:opacity-100',
+          )}
+          title={task.is_someday ? t.tasks.unmarkSomeday : t.tasks.markSomeday}
+          onClick={() =>
+            updateTask.mutate({ taskId: task.id, input: { is_someday: !task.is_someday } })
+          }
+        >
+          <Inbox className="h-3.5 w-3.5" />
+        </Button>
 
         {!isSubtask && (
           <Button

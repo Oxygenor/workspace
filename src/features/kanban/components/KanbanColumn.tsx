@@ -35,9 +35,20 @@ interface KanbanColumnProps {
   cards: KanbanCardSummary[]
   boardId: string
   onOpenCard: (cardId: string) => void
+  selectMode?: boolean
+  selectedIds?: Set<string>
+  onToggleSelect?: (cardId: string) => void
 }
 
-export function KanbanColumn({ column, cards, boardId, onOpenCard }: KanbanColumnProps) {
+export function KanbanColumn({
+  column,
+  cards,
+  boardId,
+  onOpenCard,
+  selectMode = false,
+  selectedIds,
+  onToggleSelect,
+}: KanbanColumnProps) {
   const renameColumn = useRenameColumn(boardId)
   const updateColor = useUpdateColumnColor(boardId)
   const archiveColumn = useArchiveColumn(boardId)
@@ -162,7 +173,14 @@ export function KanbanColumn({ column, cards, boardId, onOpenCard }: KanbanColum
             <CardDropGap columnId={column.id} beforeId={null} afterId={cards[0].id} />
             {cards.map((card, index) => (
               <div key={card.id} className="space-y-2">
-                <KanbanCardPreview card={card} boardId={boardId} onOpen={() => onOpenCard(card.id)} />
+                <KanbanCardPreview
+                  card={card}
+                  boardId={boardId}
+                  onOpen={() => onOpenCard(card.id)}
+                  selectMode={selectMode}
+                  selected={selectedIds?.has(card.id) ?? false}
+                  onToggleSelect={onToggleSelect}
+                />
                 <CardDropGap columnId={column.id} beforeId={card.id} afterId={cards[index + 1]?.id ?? null} />
               </div>
             ))}

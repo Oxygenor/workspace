@@ -153,9 +153,11 @@ export interface TaskRow extends Timestamped {
   description: string | null
   completed: boolean
   priority: PriorityLevel
+  start_date: string | null
   due_date: string | null
   assignee_id: string | null
   labels: string[]
+  is_someday: boolean
   position: number
 }
 
@@ -210,4 +212,44 @@ export interface TimeEntryRow {
   started_at: string
   ended_at: string | null
   created_at: string
+}
+
+export interface TaskDependencyRow {
+  id: string
+  task_id: string
+  depends_on_task_id: string
+  created_at: string
+}
+
+export interface NoteLinkRow {
+  id: string
+  source_item_id: string
+  target_item_id: string
+  created_at: string
+}
+
+export type TemplateKind = 'section' | 'checklist'
+
+export interface TemplateRow {
+  id: string
+  workspace_id: string
+  kind: TemplateKind
+  name: string
+  payload: Record<string, unknown>
+  created_at: string
+}
+
+export interface UserIntegrationRow {
+  user_id: string
+  telegram_chat_id: string | null
+  ics_feed_token: string
+  created_at: string
+  updated_at: string
+}
+
+export interface TelegramLinkCodeRow {
+  code: string
+  user_id: string
+  created_at: string
+  expires_at: string
 }

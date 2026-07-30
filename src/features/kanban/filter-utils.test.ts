@@ -19,6 +19,7 @@ function makeCard(overrides: Partial<KanbanCardSummary> & { id: string }): Kanba
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z',
     labelIds: [],
+    tagIds: [],
     checklistTotal: 0,
     checklistCompleted: 0,
     commentsCount: 0,

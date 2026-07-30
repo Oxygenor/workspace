@@ -19,6 +19,8 @@ import { resolveIcon } from '@/lib/modules/icon-map'
 import { t } from '@/i18n'
 import { useUiStore } from '@/stores/ui-store'
 import { useFavorites, useToggleFavorite } from '@/features/favorites/hooks'
+import { useSaveSectionAsTemplate } from '@/features/templates/hooks'
+import { SaveTemplateDialog } from '@/features/templates/components/SaveTemplateDialog'
 import type { WorkspaceItemRow } from '@/types/database'
 import { nextAppendPosition } from '../tree-utils'
 import { useTreeData } from '../tree-context'
@@ -59,12 +61,14 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
   const duplicateItem = useDuplicateItem()
   const archiveItem = useArchiveItem()
   const deleteItem = useDeleteItem()
+  const saveAsTemplate = useSaveSectionAsTemplate()
 
   const [isEditing, setIsEditing] = useState(false)
   const [draftName, setDraftName] = useState(item.name)
   const [confirmOpen, setConfirmOpen] = useState<'archive' | 'delete' | null>(null)
   const [createMenuOpen, setCreateMenuOpen] = useState(false)
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false)
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const isSection = item.type === 'section'
@@ -226,6 +230,9 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
               >
                 {t.common.duplicate}
               </DropdownMenuItem>
+              {isSection && (
+                <DropdownMenuItem onSelect={() => setSaveTemplateOpen(true)}>{t.templates.saveAsTemplate}</DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => setConfirmOpen('archive')}>{t.common.archive}</DropdownMenuItem>
               <DropdownMenuItem
@@ -260,6 +267,21 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
         confirmLabel={t.common.delete}
         onConfirm={() => deleteItem.mutate(item.id)}
       />
+      {isSection && (
+        <SaveTemplateDialog
+          open={saveTemplateOpen}
+          onOpenChange={setSaveTemplateOpen}
+          title={t.templates.saveSectionTitle}
+          defaultName={item.name}
+          isSaving={saveAsTemplate.isPending}
+          onSave={(name) => {
+            saveAsTemplate.mutate(
+              { name, rootItem: item },
+              { onSuccess: () => setSaveTemplateOpen(false) },
+            )
+          }}
+        />
+      )}
     </div>
   )
 }

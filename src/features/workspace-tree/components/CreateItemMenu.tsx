@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Calendar, FileText, FolderPlus, KanbanSquare, ListTodo, Table } from 'lucide-react'
+import { Calendar, FileText, FolderPlus, KanbanSquare, LayoutTemplate, ListTodo, Table } from 'lucide-react'
 
 import {
   DropdownMenu,
@@ -7,8 +7,13 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useTemplates } from '@/features/templates/hooks'
+import type { TemplateRow } from '@/types/database'
 import type { ItemType } from '@/types/database'
 import { t } from '@/i18n'
 
@@ -26,9 +31,14 @@ interface CreateItemMenuProps {
   onSelect: (type: ItemType) => void
   align?: 'start' | 'end' | 'center'
   onOpenChange?: (open: boolean) => void
+  /** When provided, adds a "Створити з шаблону" submenu listing saved section templates. */
+  onSelectTemplate?: (template: TemplateRow) => void
 }
 
-export function CreateItemMenu({ children, onSelect, align = 'start', onOpenChange }: CreateItemMenuProps) {
+export function CreateItemMenu({ children, onSelect, align = 'start', onOpenChange, onSelectTemplate }: CreateItemMenuProps) {
+  const { data: templates } = useTemplates('section')
+  const showTemplates = Boolean(onSelectTemplate)
+
   return (
     <DropdownMenu onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
@@ -41,6 +51,24 @@ export function CreateItemMenu({ children, onSelect, align = 'start', onOpenChan
             {label}
           </DropdownMenuItem>
         ))}
+        {showTemplates && (templates?.length ?? 0) > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <LayoutTemplate />
+                {t.templates.createFromTemplate}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                {templates?.map((template) => (
+                  <DropdownMenuItem key={template.id} onSelect={() => onSelectTemplate?.(template)}>
+                    {template.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

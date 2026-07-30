@@ -20,12 +20,14 @@ export const queryKeys = {
   boardLabels: (boardId: string | undefined) => ['board-labels', boardId] as const,
 
   document: (itemId: string | undefined) => ['document', itemId] as const,
+  backlinks: (itemId: string | undefined) => ['backlinks', itemId] as const,
 
   tableColumns: (tableId: string | undefined) => ['table-columns', tableId] as const,
   tableRows: (tableId: string | undefined) => ['table-rows', tableId] as const,
   tableCells: (tableId: string | undefined) => ['table-cells', tableId] as const,
 
   tasks: (taskListId: string | undefined) => ['tasks', taskListId] as const,
+  taskDependencies: (taskListId: string | undefined) => ['task-dependencies', taskListId] as const,
 
   calendarEvents: (calendarId: string | undefined) => ['calendar-events', calendarId] as const,
   deadlineCards: () => ['deadline-cards'] as const,
@@ -39,9 +41,13 @@ export const queryKeys = {
   tagLinks: (targetId: string | undefined) => ['tag-links', targetId] as const,
   tagDetail: (tagId: string | undefined) => ['tag-detail', tagId] as const,
 
+  timelineEntries: (relevantItemIds: string[]) => ['timeline-entries', ...relevantItemIds] as const,
+
   runningTimer: (userId: string | undefined) => ['running-timer', userId] as const,
   timeEntries: (cardId: string | undefined, taskId: string | undefined) =>
     ['time-entries', cardId ?? null, taskId ?? null] as const,
   timeEntriesTotal: (cardId: string | undefined, taskId: string | undefined) =>
     ['time-entries-total', cardId ?? null, taskId ?? null] as const,
+
+  userIntegrations: (userId: string | undefined) => ['user-integrations', userId] as const,
 }

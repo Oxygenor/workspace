@@ -20,6 +20,7 @@ export function applyCardFilters(
 
     if (filters.priority && card.priority !== filters.priority) return false
     if (filters.labelId && !card.labelIds.includes(filters.labelId)) return false
+    if (filters.tagId && !card.tagIds.includes(filters.tagId)) return false
 
     if (filters.dueFilter === 'no-due-date' && card.due_date) return false
     if (filters.dueFilter === 'overdue') {

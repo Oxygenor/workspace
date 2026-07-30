@@ -31,14 +31,16 @@ export async function fetchKanbanCards(boardId: string): Promise<KanbanCardSumma
 
   const cardIds = cards.map((c) => c.id)
 
-  const [cardLabelsRes, checklistRes, commentsRes, attachmentsRes] = await Promise.all([
+  const [cardLabelsRes, tagLinksRes, checklistRes, commentsRes, attachmentsRes] = await Promise.all([
     supabase.from('card_labels').select('card_id, label_id').in('card_id', cardIds),
+    supabase.from('tag_links').select('card_id, tag_id').in('card_id', cardIds),
     supabase.from('checklist_items').select('card_id, completed').in('card_id', cardIds),
     supabase.from('comments').select('id, card_id').in('card_id', cardIds),
     supabase.from('attachments').select('id, card_id').in('card_id', cardIds),
   ])
 
   const cardLabels = throwIfError(cardLabelsRes, 'Не вдалося завантажити мітки карток.')
+  const tagLinks = throwIfError(tagLinksRes, 'Не вдалося завантажити теги карток.')
   const checklist = throwIfError(checklistRes, 'Не вдалося завантажити чекліст.')
   const comments = throwIfError(commentsRes, 'Не вдалося завантажити коментарі.')
   const attachments = throwIfError(attachmentsRes, 'Не вдалося завантажити вкладення.')
@@ -48,6 +50,14 @@ export async function fetchKanbanCards(boardId: string): Promise<KanbanCardSumma
     const list = labelsByCard.get(row.card_id) ?? []
     list.push(row.label_id)
     labelsByCard.set(row.card_id, list)
+  }
+
+  const tagsByCard = new Map<string, string[]>()
+  for (const row of tagLinks) {
+    if (!row.card_id) continue
+    const list = tagsByCard.get(row.card_id) ?? []
+    list.push(row.tag_id)
+    tagsByCard.set(row.card_id, list)
   }
 
   const checklistByCard = new Map<string, { total: number; completed: number }>()
@@ -72,6 +82,7 @@ export async function fetchKanbanCards(boardId: string): Promise<KanbanCardSumma
   return cards.map((card) => ({
     ...card,
     labelIds: labelsByCard.get(card.id) ?? [],
+    tagIds: tagsByCard.get(card.id) ?? [],
     checklistTotal: checklistByCard.get(card.id)?.total ?? 0,
     checklistCompleted: checklistByCard.get(card.id)?.completed ?? 0,
     commentsCount: commentsByCard.get(card.id) ?? 0,

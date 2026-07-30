@@ -3,7 +3,19 @@ import { toast } from 'sonner'
 
 import { queryKeys } from '@/lib/query/keys'
 import type { TaskRow } from '@/types/database'
-import { createTask, deleteTask, fetchTasks, reorderTask, updateTask, type UpdateTaskInput } from './api'
+import {
+  addDependency,
+  bulkDeleteTasks,
+  bulkUpdateTasks,
+  createTask,
+  deleteTask,
+  fetchDependencies,
+  fetchTasks,
+  removeDependency,
+  reorderTask,
+  updateTask,
+  type UpdateTaskInput,
+} from './api'
 
 export function useTasks(taskListId: string) {
   return useQuery({ queryKey: queryKeys.tasks(taskListId), queryFn: () => fetchTasks(taskListId) })
@@ -68,5 +80,53 @@ export function useReorderTask(taskListId: string) {
       toast.error(error.message)
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
+  })
+}
+
+export function useBulkUpdateTasks(taskListId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ taskIds, input }: { taskIds: string[]; input: UpdateTaskInput }) => bulkUpdateTasks(taskIds, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.tasks(taskListId) }),
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+export function useBulkDeleteTasks(taskListId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (taskIds: string[]) => bulkDeleteTasks(taskIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks(taskListId) })
+      toast.success('Завдання видалено')
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+export function useDependencies(taskListId: string) {
+  return useQuery({
+    queryKey: queryKeys.taskDependencies(taskListId),
+    queryFn: () => fetchDependencies(taskListId),
+  })
+}
+
+export function useAddDependency(taskListId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ taskId, dependsOnTaskId }: { taskId: string; dependsOnTaskId: string }) =>
+      addDependency(taskId, dependsOnTaskId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.taskDependencies(taskListId) }),
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+export function useRemoveDependency(taskListId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ taskId, dependsOnTaskId }: { taskId: string; dependsOnTaskId: string }) =>
+      removeDependency(taskId, dependsOnTaskId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.taskDependencies(taskListId) }),
+    onError: (error: Error) => toast.error(error.message),
   })
 }

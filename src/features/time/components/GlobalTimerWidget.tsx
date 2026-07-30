@@ -5,6 +5,7 @@ import { Clock, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase/client'
 import { t } from '@/i18n'
+import { usePomodoroStore } from '@/stores/pomodoro-store'
 import { useRunningTimer, useStopTimer } from '../hooks'
 import { LiveElapsed } from './LiveElapsed'
 
@@ -32,6 +33,7 @@ export function GlobalTimerWidget() {
   const { data: runningEntry } = useRunningTimer()
   const stopTimer = useStopTimer()
   const navigate = useNavigate()
+  const pomodoroTimeEntryId = usePomodoroStore((s) => s.timeEntryId)
 
   const cardId = runningEntry?.card_id ?? null
   const taskId = runningEntry?.task_id ?? null
@@ -42,7 +44,9 @@ export function GlobalTimerWidget() {
     enabled: Boolean(cardId || taskId),
   })
 
-  if (!runningEntry) return null
+  // A Pomodoro-driven entry gets its own richer widget (PomodoroWidget) —
+  // avoid showing two overlapping "you're tracking X" indicators at once.
+  if (!runningEntry || runningEntry.id === pomodoroTimeEntryId) return null
 
   return (
     <button

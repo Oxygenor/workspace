@@ -6,27 +6,34 @@ import { Play, Square, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { t } from '@/i18n'
+import { usePomodoroStore } from '@/stores/pomodoro-store'
 import { formatDuration } from '../format'
 import { useDeleteTimeEntry, useEntriesForTarget, useRunningTimer, useStartTimer, useStopTimer, useTotalSecondsForTarget } from '../hooks'
 import { LiveElapsed } from './LiveElapsed'
+import { PomodoroControls } from './PomodoroControls'
 
 interface TimeTrackingSectionProps {
   cardId?: string
   taskId?: string
+  title: string
 }
 
-export function TimeTrackingSection({ cardId, taskId }: TimeTrackingSectionProps) {
+export function TimeTrackingSection({ cardId, taskId, title }: TimeTrackingSectionProps) {
   const { data: runningEntry, isLoading: runningLoading } = useRunningTimer()
   const { data: entries, isLoading: entriesLoading } = useEntriesForTarget({ cardId, taskId })
   const { data: totalSeconds, isLoading: totalLoading } = useTotalSecondsForTarget({ cardId, taskId })
   const startTimer = useStartTimer()
   const stopTimer = useStopTimer()
   const deleteEntry = useDeleteTimeEntry({ cardId, taskId })
+  const pomodoroStatus = usePomodoroStore((s) => s.status)
+  const [mode, setMode] = useState<'free' | 'pomodoro'>('free')
 
   const isRunningForThis = Boolean(
     runningEntry && (cardId ? runningEntry.card_id === cardId : runningEntry.task_id === taskId),
   )
+  const pomodoroActive = pomodoroStatus !== 'idle'
 
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -53,16 +60,36 @@ export function TimeTrackingSection({ cardId, taskId }: TimeTrackingSectionProps
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">{t.time.sectionTitle}</h3>
-        <Button
-          variant={isRunningForThis ? 'destructive' : 'outline'}
-          size="sm"
-          disabled={runningLoading || startTimer.isPending || stopTimer.isPending}
-          onClick={handleToggle}
-        >
-          {isRunningForThis ? <Square className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-          {isRunningForThis ? t.time.stop : t.time.start}
-        </Button>
+        <Tabs value={mode} onValueChange={(v) => setMode(v as 'free' | 'pomodoro')}>
+          <TabsList className="h-7">
+            <TabsTrigger value="free" className="h-6 px-2 text-xs">
+              {t.time.freeMode}
+            </TabsTrigger>
+            <TabsTrigger value="pomodoro" className="h-6 px-2 text-xs">
+              {t.time.pomodoroMode}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
+
+      {mode === 'free' ? (
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">
+            {pomodoroActive && !isRunningForThis ? t.time.blockedByPomodoro : ''}
+          </span>
+          <Button
+            variant={isRunningForThis ? 'destructive' : 'outline'}
+            size="sm"
+            disabled={runningLoading || startTimer.isPending || stopTimer.isPending || (pomodoroActive && !isRunningForThis)}
+            onClick={handleToggle}
+          >
+            {isRunningForThis ? <Square className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            {isRunningForThis ? t.time.stop : t.time.start}
+          </Button>
+        </div>
+      ) : (
+        <PomodoroControls cardId={cardId} taskId={taskId} title={title} />
+      )}
 
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">{t.time.totalTracked}</span>

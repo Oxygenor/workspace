@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Download, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -7,11 +7,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrentWorkspace, useRenameWorkspace } from '@/features/workspace/hooks'
+import { useExportWorkspace } from '@/features/workspace/use-export'
 import { t } from '@/i18n'
 
 export default function WorkspaceSettingsPage() {
   const { workspace, isLoading } = useCurrentWorkspace()
   const renameWorkspace = useRenameWorkspace(workspace?.id)
+  const { exportWorkspace, isExporting } = useExportWorkspace()
   const [name, setName] = useState('')
 
   useEffect(() => {
@@ -54,6 +56,19 @@ export default function WorkspaceSettingsPage() {
               {t.common.save}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t.workspaceSettings.exportTitle}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">{t.workspaceSettings.exportDescription}</p>
+          <Button variant="outline" disabled={isExporting} onClick={() => exportWorkspace(workspace)}>
+            {isExporting ? <Loader2 className="animate-spin" /> : <Download />}
+            {isExporting ? t.workspaceSettings.exporting : t.workspaceSettings.exportButton}
+          </Button>
         </CardContent>
       </Card>
     </div>

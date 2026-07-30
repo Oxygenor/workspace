@@ -206,7 +206,7 @@ export function CardDetailDialog({ cardId, boardId, open, onOpenChange }: CardDe
 
               <Separator />
 
-              <TimeTrackingSection cardId={cardId} />
+              <TimeTrackingSection cardId={cardId} title={card.title} />
 
               <Separator />
 

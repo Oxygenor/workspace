@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
-import { Plus } from 'lucide-react'
+import { Archive, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { nextAppendPosition, computeGapPosition } from '@/lib/position'
 import { t } from '@/i18n'
@@ -15,8 +17,10 @@ import { EMPTY_FILTERS } from '../types'
 import type { KanbanCardSummary } from '../types'
 import { applyCardFilters, sortCards } from '../filter-utils'
 import {
+  useArchiveCard,
   useColumns,
   useCreateColumn,
+  useDeleteCard,
   useKanbanCards,
   useMoveCard,
   useReorderCard,
@@ -29,19 +33,22 @@ import { KanbanCardPreview } from './KanbanCardPreview'
 interface KanbanBoardProps {
   boardId: string
   onOpenCard: (cardId: string) => void
+  selectMode?: boolean
 }
 
 type DragItem =
   | { kind: 'card'; card: KanbanCardSummary }
   | { kind: 'column'; column: KanbanColumnRow }
 
-export function KanbanBoard({ boardId, onOpenCard }: KanbanBoardProps) {
+export function KanbanBoard({ boardId, onOpenCard, selectMode = false }: KanbanBoardProps) {
   const { data: columns, isLoading: columnsLoading } = useColumns(boardId)
   const { data: cards, isLoading: cardsLoading } = useKanbanCards(boardId)
   const createColumn = useCreateColumn(boardId)
   const reorderColumn = useReorderColumn(boardId)
   const reorderCard = useReorderCard(boardId)
   const moveCard = useMoveCard(boardId)
+  const archiveCard = useArchiveCard(boardId)
+  const deleteCard = useDeleteCard(boardId)
 
   const filters = useKanbanFiltersStore((s) => s.filtersByBoard[boardId] ?? EMPTY_FILTERS)
   const search = useKanbanFiltersStore((s) => s.searchByBoard[boardId] ?? '')
@@ -50,6 +57,12 @@ export function KanbanBoard({ boardId, onOpenCard }: KanbanBoardProps) {
   const [isAddingColumn, setIsAddingColumn] = useState(false)
   const [newColumnName, setNewColumnName] = useState('')
   const [activeItem, setActiveItem] = useState<DragItem | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+
+  useEffect(() => {
+    if (!selectMode) setSelectedIds(new Set())
+  }, [selectMode])
 
   const cardsByColumn = useMemo(() => {
     const filtered = applyCardFilters(cards ?? [], filters, search)
@@ -64,6 +77,37 @@ export function KanbanBoard({ boardId, onOpenCard }: KanbanBoardProps) {
     }
     return map
   }, [cards, filters, search, sort])
+
+  function toggleCardSelection(cardId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(cardId)) next.delete(cardId)
+      else next.add(cardId)
+      return next
+    })
+  }
+
+  function handleBulkMove(columnId: string) {
+    const targetCards = cardsByColumn.get(columnId) ?? []
+    const base = nextAppendPosition(targetCards)
+    let index = 0
+    for (const cardId of selectedIds) {
+      moveCard.mutate({ cardId, newColumnId: columnId, newPosition: base + index * 1000 })
+      index += 1
+    }
+    setSelectedIds(new Set())
+  }
+
+  function handleBulkArchive() {
+    for (const cardId of selectedIds) archiveCard.mutate(cardId)
+    setSelectedIds(new Set())
+  }
+
+  function handleBulkDelete() {
+    for (const cardId of selectedIds) deleteCard.mutate(cardId)
+    setSelectedIds(new Set())
+    setBulkDeleteOpen(false)
+  }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
 
@@ -150,6 +194,9 @@ export function KanbanBoard({ boardId, onOpenCard }: KanbanBoardProps) {
               cards={cardsByColumn.get(column.id) ?? []}
               boardId={boardId}
               onOpenCard={onOpenCard}
+              selectMode={selectMode}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleCardSelection}
             />
             <ColumnDropGap beforeId={column.id} afterId={orderedColumns[index + 1]?.id ?? null} />
           </div>
@@ -184,6 +231,43 @@ export function KanbanBoard({ boardId, onOpenCard }: KanbanBoardProps) {
           </div>
         )}
       </DragOverlay>
+
+      {selectMode && selectedIds.size > 0 && (
+        <div className="fixed inset-x-0 bottom-6 z-20 mx-auto flex w-fit items-center gap-2 rounded-xl border border-border bg-background p-2 shadow-lg">
+          <span className="px-2 text-sm text-muted-foreground">
+            {selectedIds.size} {t.kanban.selectedSuffix}
+          </span>
+          <Select onValueChange={handleBulkMove}>
+            <SelectTrigger className="h-8 w-48">
+              <SelectValue placeholder={t.kanban.moveToColumn} />
+            </SelectTrigger>
+            <SelectContent>
+              {orderedColumns.map((column) => (
+                <SelectItem key={column.id} value={column.id}>
+                  {column.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" onClick={handleBulkArchive}>
+            <Archive className="h-3.5 w-3.5" />
+            {t.common.archive}
+          </Button>
+          <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)}>
+            <Trash2 className="h-3.5 w-3.5" />
+            {t.common.delete}
+          </Button>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title={t.kanban.confirmBulkDeleteTitle}
+        description={t.kanban.confirmBulkDeleteDescription.replace('{count}', String(selectedIds.size))}
+        confirmLabel={t.common.delete}
+        onConfirm={handleBulkDelete}
+      />
     </DndContext>
   )
 }

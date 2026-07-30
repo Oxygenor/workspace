@@ -12,6 +12,7 @@ import { useCreateItem, useWorkspaceItems } from '@/features/workspace-tree/hook
 import { nextAppendPosition } from '@/features/workspace-tree/tree-utils'
 import { useCurrentWorkspace } from '@/features/workspace/hooks'
 import { GlobalTimerWidget } from '@/features/time/components/GlobalTimerWidget'
+import { PomodoroWidget } from '@/features/time/components/PomodoroWidget'
 import { useUiStore } from '@/stores/ui-store'
 import { t } from '@/i18n'
 import { ThemeToggle } from './ThemeToggle'
@@ -80,6 +81,7 @@ export function Topbar() {
           </Button>
         </CreateItemMenu>
 
+        <PomodoroWidget />
         <GlobalTimerWidget />
 
         <ThemeToggle />

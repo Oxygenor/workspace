@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2, Upload } from 'lucide-react'
+import { Bell, Loader2, Upload } from 'lucide-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,23 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { profileSchema, type ProfileFormValues } from '@/lib/validations/auth'
 import { useAuth } from '@/features/auth/use-auth'
 import { useProfile, useUpdateProfileName, useUploadAvatar } from '@/features/profile/hooks'
+import { IntegrationsSettings } from '@/features/integrations/components/IntegrationsSettings'
 import { t } from '@/i18n'
+
+function useNotificationPermission() {
+  const supported = typeof window !== 'undefined' && 'Notification' in window
+  const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(
+    supported ? Notification.permission : 'unsupported',
+  )
+
+  async function requestPermission() {
+    if (!supported) return
+    const result = await Notification.requestPermission()
+    setPermission(result)
+  }
+
+  return { permission, requestPermission }
+}
 
 export default function ProfilePage() {
   const { user } = useAuth()
@@ -21,6 +37,7 @@ export default function ProfilePage() {
   const updateProfileName = useUpdateProfileName()
   const uploadAvatar = useUploadAvatar()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { permission, requestPermission } = useNotificationPermission()
 
   const {
     register,
@@ -110,6 +127,39 @@ export default function ProfilePage() {
               {t.profile.saveChanges}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t.profile.notificationsTitle}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">{t.profile.notificationsDescription}</p>
+          {permission === 'granted' && (
+            <p className="text-sm font-medium text-foreground">{t.profile.notificationsGranted}</p>
+          )}
+          {permission === 'denied' && (
+            <p className="text-sm text-destructive">{t.profile.notificationsDenied}</p>
+          )}
+          {permission === 'unsupported' && (
+            <p className="text-sm text-muted-foreground">{t.profile.notificationsUnsupported}</p>
+          )}
+          {permission === 'default' && (
+            <Button type="button" variant="outline" size="sm" onClick={requestPermission}>
+              <Bell />
+              {t.profile.notificationsEnable}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t.integrations.title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <IntegrationsSettings />
         </CardContent>
       </Card>
     </div>

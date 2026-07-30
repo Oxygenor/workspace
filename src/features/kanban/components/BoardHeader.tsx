@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { ArrowDownAZ, Search } from 'lucide-react'
+import { ArrowDownAZ, CheckSquare, Search } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -17,9 +18,11 @@ import { BoardFilters } from './BoardFilters'
 
 interface BoardHeaderProps {
   item: WorkspaceItemRow
+  selectMode: boolean
+  onToggleSelectMode: () => void
 }
 
-export function BoardHeader({ item }: BoardHeaderProps) {
+export function BoardHeader({ item, selectMode, onToggleSelectMode }: BoardHeaderProps) {
   const updateSettings = useUpdateItemSettings()
   const search = useKanbanFiltersStore((s) => s.searchByBoard[item.id] ?? '')
   const setSearch = useKanbanFiltersStore((s) => s.setSearch)
@@ -72,6 +75,17 @@ export function BoardHeader({ item }: BoardHeaderProps) {
         </div>
 
         <BoardFilters boardId={item.id} />
+
+        <Button
+          variant={selectMode ? 'default' : 'outline'}
+          size="icon"
+          className="h-8 w-8"
+          aria-label={t.kanban.selectMode}
+          title={t.kanban.selectMode}
+          onClick={onToggleSelectMode}
+        >
+          <CheckSquare className="h-3.5 w-3.5" />
+        </Button>
 
         <Select value={sort} onValueChange={(value) => setSort(item.id, value as typeof sort)}>
           <SelectTrigger className="h-8 w-40">

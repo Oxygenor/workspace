@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Archive, Home, Plus, Settings, Star, Tags } from 'lucide-react'
+import { Archive, CalendarCheck, Clock4, Home, Plus, Settings, Star, Tags } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,7 @@ import { CreateItemMenu } from '@/features/workspace-tree/components/CreateItemM
 import { WorkspaceTree } from '@/features/workspace-tree/components/WorkspaceTree'
 import { useCreateItem, useWorkspaceItems } from '@/features/workspace-tree/hooks'
 import { nextAppendPosition } from '@/features/workspace-tree/tree-utils'
+import { useCreateFromSectionTemplate } from '@/features/templates/hooks'
 import { useUiStore } from '@/stores/ui-store'
 import { t } from '@/i18n'
 
@@ -23,6 +24,7 @@ interface SidebarContentProps {
 
 export function SidebarContent({ onNavigate }: SidebarContentProps) {
   const createItem = useCreateItem()
+  const createFromTemplate = useCreateFromSectionTemplate()
   const setPendingRenameItemId = useUiStore((s) => s.setPendingRenameItemId)
   const { data: items } = useWorkspaceItems()
 
@@ -32,6 +34,11 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
       { type, name: t.tree.untitledSection, parentId: null, position: nextAppendPosition(rootSiblings) },
       { onSuccess: (created) => setPendingRenameItemId(created.id) },
     )
+  }
+
+  function handleCreateRootFromTemplate(template: Parameters<typeof createFromTemplate.mutate>[0]['template']) {
+    const rootSiblings = (items ?? []).filter((item) => item.parent_id === null)
+    createFromTemplate.mutate({ template, parentId: null, position: nextAppendPosition(rootSiblings) })
   }
 
   return (
@@ -53,11 +60,19 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
           <Tags className="h-4 w-4" />
           {t.tags.title}
         </NavLink>
+        <NavLink to="/app/reports/time" className={navLinkClass} onClick={onNavigate}>
+          <Clock4 className="h-4 w-4" />
+          {t.reports.navTimeReport}
+        </NavLink>
+        <NavLink to="/app/reports/weekly-review" className={navLinkClass} onClick={onNavigate}>
+          <CalendarCheck className="h-4 w-4" />
+          {t.reports.navWeeklyReview}
+        </NavLink>
       </div>
 
       <div className="flex items-center justify-between px-3 pb-1 pt-2">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t.nav.sections}</span>
-        <CreateItemMenu onSelect={handleCreateRoot} align="end">
+        <CreateItemMenu onSelect={handleCreateRoot} onSelectTemplate={handleCreateRootFromTemplate} align="end">
           <Button variant="ghost" size="icon" className="h-6 w-6">
             <Plus className="h-3.5 w-3.5" />
           </Button>

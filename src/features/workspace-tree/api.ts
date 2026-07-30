@@ -125,15 +125,25 @@ export async function moveWorkspaceItem(itemId: string, newParentId: string | nu
   if (error) throw toAppError(error, 'Не вдалося перемістити елемент.')
 }
 
+/**
+ * Duplicates a workspace item. For sections, this recurses into the full
+ * subtree so "duplicate" gives you a working clone of the whole branch
+ * (e.g. a project template), not just an empty section.
+ *
+ * `parentIdOverride`/`isNested` are only used internally by the recursion:
+ * top-level callers never pass them.
+ */
 export async function duplicateWorkspaceItem(
   item: WorkspaceItemRow,
   newPosition: number,
+  parentIdOverride?: string | null,
 ): Promise<WorkspaceItemRow> {
+  const isNested = parentIdOverride !== undefined
   const copy = await createWorkspaceItem({
     workspaceId: item.workspace_id,
-    parentId: item.parent_id,
+    parentId: isNested ? parentIdOverride : item.parent_id,
     type: item.type,
-    name: `${item.name} (копія)`,
+    name: isNested ? item.name : `${item.name} (копія)`,
     position: newPosition,
     createdBy: item.created_by ?? '',
   })
@@ -171,6 +181,24 @@ export async function duplicateWorkspaceItem(
       await supabase
         .from('table_columns')
         .insert(columns.map((c) => ({ table_id: copy.id, name: c.name, field_type: c.field_type, settings: c.settings, position: c.position })))
+    }
+  }
+
+  if (item.type === 'section') {
+    const { data: children, error } = await supabase
+      .from('workspace_items')
+      .select('*')
+      .eq('parent_id', item.id)
+      .is('archived_at', null)
+      .order('position', { ascending: true })
+    if (error) throw toAppError(error, 'Розділ скопійовано без вмісту.')
+
+    if (children && children.length > 0) {
+      let childPosition = 1000
+      for (const child of children) {
+        await duplicateWorkspaceItem(child, childPosition, copy.id)
+        childPosition += 1000
+      }
     }
   }
 

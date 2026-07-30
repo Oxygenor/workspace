@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select'
 import { useKanbanFiltersStore } from '@/stores/kanban-filters-store'
 import { t } from '@/i18n'
+import { useWorkspaceTags } from '@/features/tags/hooks'
 import { PRIORITY_LABELS, PRIORITY_ORDER } from '../priority'
 import { EMPTY_FILTERS } from '../types'
 import { useBoardLabels } from '../hooks'
@@ -21,6 +22,7 @@ interface BoardFiltersProps {
 
 export function BoardFilters({ boardId }: BoardFiltersProps) {
   const { data: labels } = useBoardLabels(boardId)
+  const { data: tags } = useWorkspaceTags()
   const filters = useKanbanFiltersStore((s) => s.filtersByBoard[boardId] ?? EMPTY_FILTERS)
   const setFilter = useKanbanFiltersStore((s) => s.setFilter)
   const clearFilters = useKanbanFiltersStore((s) => s.clearFilters)
@@ -73,6 +75,26 @@ export function BoardFilters({ boardId }: BoardFiltersProps) {
               {labels?.map((l) => (
                 <SelectItem key={l.id} value={l.id}>
                   {l.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">{t.kanban.tag}</label>
+          <Select
+            value={filters.tagId ?? '__all__'}
+            onValueChange={(value) => setFilter(boardId, { tagId: value === '__all__' ? null : value })}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">{t.common.search}</SelectItem>
+              {tags?.map((tag) => (
+                <SelectItem key={tag.id} value={tag.id}>
+                  {tag.name}
                 </SelectItem>
               ))}
             </SelectContent>

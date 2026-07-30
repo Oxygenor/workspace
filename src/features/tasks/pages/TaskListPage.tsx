@@ -1,16 +1,19 @@
 import { useMemo, useState } from 'react'
+import { ListChecks } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { nextAppendPosition } from '@/lib/position'
 import type { ModuleComponentProps } from '@/lib/modules/registry'
 import { t } from '@/i18n'
 import type { TaskRow } from '@/types/database'
 import { AddTaskInput } from '../components/AddTaskInput'
 import { TaskItem } from '../components/TaskItem'
-import { useCreateTask, useTasks } from '../hooks'
+import { useBulkDeleteTasks, useBulkUpdateTasks, useCreateTask, useTasks } from '../hooks'
 
-type Mode = 'all' | 'active' | 'completed' | 'overdue' | 'today' | 'thisWeek'
+type Mode = 'all' | 'active' | 'completed' | 'overdue' | 'today' | 'thisWeek' | 'someday'
 
 function toDateKey(date: Date): string {
   const year = date.getFullYear()
@@ -39,8 +42,11 @@ function weekEndKey(date: Date): string {
 
 function matchesMode(task: TaskRow, mode: Mode, todayKey: string, weekStart: string, weekEnd: string): boolean {
   if (mode === 'all') return true
-  if (mode === 'active') return !task.completed
+  if (mode === 'someday') return task.is_someday
   if (mode === 'completed') return task.completed
+  // "Someday/maybe" tasks are intentionally parked and shouldn't clutter active planning views.
+  if (task.is_someday) return false
+  if (mode === 'active') return !task.completed
   if (!task.due_date) return false
   const dueKey = task.due_date.slice(0, 10)
   if (mode === 'overdue') return !task.completed && dueKey < todayKey
@@ -52,7 +58,12 @@ function matchesMode(task: TaskRow, mode: Mode, todayKey: string, weekStart: str
 export function TaskListPage({ item }: ModuleComponentProps) {
   const { data: tasks, isLoading } = useTasks(item.id)
   const createTask = useCreateTask(item.id)
+  const bulkUpdateTasks = useBulkUpdateTasks(item.id)
+  const bulkDeleteTasks = useBulkDeleteTasks(item.id)
   const [mode, setMode] = useState<Mode>('all')
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
 
   const topLevelTasks = useMemo(() => (tasks ?? []).filter((task) => task.parent_task_id === null), [tasks])
 
@@ -82,20 +93,87 @@ export function TaskListPage({ item }: ModuleComponentProps) {
     createTask.mutate({ title, position: nextAppendPosition(topLevelTasks) })
   }
 
+  function toggleSelectMode() {
+    setSelectMode((prev) => !prev)
+    setSelectedIds(new Set())
+  }
+
+  function toggleSelect(taskId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(taskId)) next.delete(taskId)
+      else next.add(taskId)
+      return next
+    })
+  }
+
+  function handleBulkComplete() {
+    bulkUpdateTasks.mutate(
+      { taskIds: Array.from(selectedIds), input: { completed: true } },
+      { onSuccess: () => setSelectedIds(new Set()) },
+    )
+  }
+
+  function handleBulkSomeday() {
+    bulkUpdateTasks.mutate(
+      { taskIds: Array.from(selectedIds), input: { is_someday: true } },
+      { onSuccess: () => setSelectedIds(new Set()) },
+    )
+  }
+
+  function handleBulkDelete() {
+    bulkDeleteTasks.mutate(Array.from(selectedIds), {
+      onSuccess: () => {
+        setSelectedIds(new Set())
+        setBulkDeleteOpen(false)
+      },
+    })
+  }
+
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
-      <Tabs value={mode} onValueChange={(value) => setMode(value as Mode)}>
-        <TabsList>
-          <TabsTrigger value="all">{t.tasks.all}</TabsTrigger>
-          <TabsTrigger value="active">{t.tasks.active}</TabsTrigger>
-          <TabsTrigger value="completed">{t.tasks.completed}</TabsTrigger>
-          <TabsTrigger value="overdue">{t.tasks.overdue}</TabsTrigger>
-          <TabsTrigger value="today">{t.tasks.today}</TabsTrigger>
-          <TabsTrigger value="thisWeek">{t.tasks.thisWeek}</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="flex items-center justify-between gap-2">
+        <Tabs value={mode} onValueChange={(value) => setMode(value as Mode)}>
+          <TabsList>
+            <TabsTrigger value="all">{t.tasks.all}</TabsTrigger>
+            <TabsTrigger value="active">{t.tasks.active}</TabsTrigger>
+            <TabsTrigger value="completed">{t.tasks.completed}</TabsTrigger>
+            <TabsTrigger value="overdue">{t.tasks.overdue}</TabsTrigger>
+            <TabsTrigger value="today">{t.tasks.today}</TabsTrigger>
+            <TabsTrigger value="thisWeek">{t.tasks.thisWeek}</TabsTrigger>
+            <TabsTrigger value="someday">{t.tasks.someday}</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <Button
+          variant={selectMode ? 'secondary' : 'ghost'}
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          title={selectMode ? t.tasks.selectModeDisable : t.tasks.selectModeEnable}
+          onClick={toggleSelectMode}
+        >
+          <ListChecks className="h-4 w-4" />
+        </Button>
+      </div>
 
       <AddTaskInput placeholder={t.tasks.addTask} onSubmit={handleAddTask} />
+
+      {selectMode && selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+          <span className="text-muted-foreground">
+            {t.tasks.selectedCount}: {selectedIds.size}
+          </span>
+          <Button size="sm" variant="outline" onClick={handleBulkComplete}>
+            {t.tasks.bulkComplete}
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleBulkSomeday}>
+            {t.tasks.bulkSomeday}
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => setBulkDeleteOpen(true)}>
+            {t.tasks.bulkDelete}
+          </Button>
+        </div>
+      )}
 
       {isLoading && (
         <div className="space-y-2">
@@ -112,10 +190,27 @@ export function TaskListPage({ item }: ModuleComponentProps) {
       {!isLoading && visibleTasks.length > 0 && (
         <div className="space-y-1">
           {visibleTasks.map((task) => (
-            <TaskItem key={task.id} task={task} taskListId={item.id} subtasks={subtasksByParent.get(task.id) ?? []} />
+            <TaskItem
+              key={task.id}
+              task={task}
+              taskListId={item.id}
+              subtasks={subtasksByParent.get(task.id) ?? []}
+              selectMode={selectMode}
+              selected={selectedIds.has(task.id)}
+              onToggleSelect={toggleSelect}
+            />
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title={`${t.tasks.bulkDeleteTitlePrefix} ${selectedIds.size} ${t.tasks.tasksWord}?`}
+        description={t.tasks.bulkDeleteDescription}
+        confirmLabel={t.common.delete}
+        onConfirm={handleBulkDelete}
+      />
     </div>
   )
 }
