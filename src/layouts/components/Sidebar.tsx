@@ -24,7 +24,7 @@ export function Sidebar() {
       >
         {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
       </button>
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div className={cn('min-h-0 flex-1 overflow-hidden', collapsed && 'invisible')}>
         <SidebarContent />
       </div>
     </aside>
