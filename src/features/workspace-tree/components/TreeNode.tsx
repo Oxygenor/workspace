@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { ChevronRight, GripVertical, MoreHorizontal, Plus, Star } from 'lucide-react'
+import { ChevronRight, MoreHorizontal, Plus, Star } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -133,13 +133,15 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
           setDragRef(node)
           setDropRef(node)
         }}
+        {...attributes}
+        {...listeners}
         style={{
-          paddingLeft: depth * 16,
+          paddingLeft: depth * 8,
           transform: CSS.Translate.toString(transform),
           backgroundColor: isActive ? undefined : `${item.color}14`,
         }}
         className={cn(
-          'group flex h-8 items-center gap-1 rounded-md pr-1 text-sm transition-colors',
+          'group flex h-8 cursor-grab items-center gap-1 rounded-md pr-1 text-sm transition-colors active:cursor-grabbing',
           isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground hover:bg-sidebar-accent/60',
           isOver && 'ring-1 ring-inset ring-primary',
           isDragging && 'opacity-40',
@@ -155,16 +157,6 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
             className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-90')}
             style={{ color: item.color }}
           />
-        </button>
-
-        <button
-          type="button"
-          {...attributes}
-          {...listeners}
-          className="hidden h-5 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground group-hover:flex"
-          aria-label="Перетягнути"
-        >
-          <GripVertical className="h-3.5 w-3.5" />
         </button>
 
         <IconPicker

@@ -22,7 +22,7 @@ export function WorkspaceTree() {
     return { itemMap: buildItemMap(list), childrenMap: buildChildrenMap(list) }
   }, [items])
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { delay: 2000, tolerance: 5 } }))
 
   function handleDragStart(event: DragStartEvent) {
     const data = event.active.data.current as { kind: 'item'; item: WorkspaceItemRow } | undefined
