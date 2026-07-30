@@ -32,6 +32,10 @@ export function fieldTypeLabel(fieldType: TableFieldType): string {
 
 export type TableFormula = 'none' | 'sum' | 'avg' | 'count'
 
+export function getFormulaOptionsForFieldType(fieldType: TableFieldType): TableFormula[] {
+  return fieldType === 'number' ? ['none', 'sum', 'avg', 'count'] : ['none', 'count']
+}
+
 export function getColumnFormula(settings: Record<string, unknown>): TableFormula {
   const formula = (settings as { formula?: unknown }).formula
   return formula === 'sum' || formula === 'avg' || formula === 'count' ? formula : 'none'

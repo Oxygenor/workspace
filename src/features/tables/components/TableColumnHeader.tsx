@@ -21,7 +21,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { cn } from '@/lib/utils'
 import { t } from '@/i18n'
 import type { TableColumnRow } from '@/types/database'
-import { FIELD_TYPES, fieldTypeLabel, formulaLabel, getColumnFormula } from '../types'
+import { FIELD_TYPES, fieldTypeLabel, formulaLabel, getColumnFormula, getFormulaOptionsForFieldType } from '../types'
 import type { TableFormula } from '../types'
 import { useDeleteColumn, useRenameColumn, useUpdateColumnSettings, useUpdateColumnType } from '../hooks'
 import { ColumnOptionsEditor } from './ColumnOptionsEditor'
@@ -58,8 +58,7 @@ export function TableColumnHeader({ column, tableId }: TableColumnHeaderProps) {
 
   const hasOptions = column.field_type === 'select' || column.field_type === 'status'
   const currentFormula = getColumnFormula(column.settings)
-  const formulaOptions: TableFormula[] =
-    column.field_type === 'number' ? ['none', 'sum', 'avg', 'count'] : ['none', 'count']
+  const formulaOptions = getFormulaOptionsForFieldType(column.field_type)
 
   function setFormula(formula: TableFormula) {
     updateColumnSettings.mutate({ columnId: column.id, settings: { ...column.settings, formula } })

@@ -2,16 +2,32 @@ import { useMemo, useState } from 'react'
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove, horizontalListSortingStrategy, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Plus } from 'lucide-react'
+import { Plus, Sigma } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 import { computeGapPosition, nextAppendPosition } from '@/lib/position'
 import { t } from '@/i18n'
-import type { TableCellRow, TableColumnRow, TableRowRow } from '@/types/database'
-import { useCreateColumn, useCreateRow, useReorderColumn, useReorderRow, useTableCells, useTableColumns, useTableRows } from '../hooks'
-import { getColumnFormula } from '../types'
+import type { TableCellRow, TableColumnRow, TableFieldType, TableRowRow } from '@/types/database'
+import {
+  useCreateColumn,
+  useCreateRow,
+  useReorderColumn,
+  useReorderRow,
+  useTableCells,
+  useTableColumns,
+  useTableRows,
+  useUpdateColumnSettings,
+} from '../hooks'
+import { fieldTypeLabel, formulaLabel, getColumnFormula, getFormulaOptionsForFieldType, FIELD_TYPES } from '../types'
 import { TableColumnHeader } from './TableColumnHeader'
 import { TableDataRow } from './TableDataRow'
 
@@ -47,8 +63,10 @@ export function TableGrid({ tableId }: TableGridProps) {
   const createRow = useCreateRow(tableId)
   const reorderColumn = useReorderColumn(tableId)
   const reorderRow = useReorderRow(tableId)
+  const updateColumnSettings = useUpdateColumnSettings(tableId)
 
   const [isAddingColumn, setIsAddingColumn] = useState(false)
+  const [pendingFieldType, setPendingFieldType] = useState<TableFieldType>('text')
   const [newColumnName, setNewColumnName] = useState('')
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
@@ -121,19 +139,33 @@ export function TableGrid({ tableId }: TableGridProps) {
     reorderRow.mutate({ rowId: active.id as string, position })
   }
 
-  function handleCreateColumn() {
+  function startAddingColumn(fieldType: TableFieldType) {
+    setPendingFieldType(fieldType)
+    setIsAddingColumn(true)
+  }
+
+  function commitCreateColumn() {
     const trimmed = newColumnName.trim()
-    if (!trimmed) {
-      setIsAddingColumn(false)
-      return
-    }
-    createColumn.mutate({ name: trimmed, fieldType: 'text', position: nextAppendPosition(columns ?? []) })
+    createColumn.mutate({
+      name: trimmed || fieldTypeLabel(pendingFieldType),
+      fieldType: pendingFieldType,
+      position: nextAppendPosition(columns ?? []),
+    })
+    setNewColumnName('')
+    setIsAddingColumn(false)
+  }
+
+  function cancelAddingColumn() {
     setNewColumnName('')
     setIsAddingColumn(false)
   }
 
   function handleCreateRow() {
     createRow.mutate(nextAppendPosition(rows ?? []))
+  }
+
+  function setColumnFormula(column: TableColumnRow, formula: ReturnType<typeof getColumnFormula>) {
+    updateColumnSettings.mutate({ columnId: column.id, settings: { ...column.settings, formula } })
   }
 
   if (columnsLoading || rowsLoading || cellsLoading) {
@@ -151,6 +183,7 @@ export function TableGrid({ tableId }: TableGridProps) {
   const orderedRows = rows ?? []
   const columnIds = orderedColumns.map((c) => c.id)
   const rowIds = orderedRows.map((r) => r.id)
+  const hasAnyFormula = orderedColumns.some((column) => getColumnFormula(column.settings) !== 'none')
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
@@ -164,30 +197,40 @@ export function TableGrid({ tableId }: TableGridProps) {
                   <TableColumnHeader key={column.id} column={column} tableId={tableId} />
                 ))}
               </SortableContext>
-              <th className="border-b border-border bg-muted/40 p-1.5 align-middle">
+              <th className="border-b border-border p-1.5 align-middle">
                 {isAddingColumn ? (
                   <Input
                     autoFocus
                     value={newColumnName}
                     onChange={(e) => setNewColumnName(e.target.value)}
-                    placeholder={t.table.columnName}
-                    onBlur={handleCreateColumn}
+                    placeholder={fieldTypeLabel(pendingFieldType)}
+                    onBlur={commitCreateColumn}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleCreateColumn()
-                      if (e.key === 'Escape') setIsAddingColumn(false)
+                      if (e.key === 'Enter') commitCreateColumn()
+                      if (e.key === 'Escape') cancelAddingColumn()
                     }}
                     className="h-7 w-40 text-sm font-normal"
                   />
                 ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="whitespace-nowrap font-normal"
-                    onClick={() => setIsAddingColumn(true)}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    {t.table.addColumn}
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="whitespace-nowrap font-normal text-muted-foreground hover:text-foreground"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        {t.table.addColumn}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      {FIELD_TYPES.map((fieldType) => (
+                        <DropdownMenuItem key={fieldType} onSelect={() => startAddingColumn(fieldType)}>
+                          {fieldTypeLabel(fieldType)}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
               </th>
             </tr>
@@ -201,34 +244,70 @@ export function TableGrid({ tableId }: TableGridProps) {
               </tr>
             ) : (
               <SortableContext items={rowIds} strategy={verticalListSortingStrategy}>
-                {orderedRows.map((row) => (
+                {orderedRows.map((row, index) => (
                   <TableDataRow
                     key={row.id}
                     tableId={tableId}
                     row={row}
                     columns={orderedColumns}
                     cellsByColumnId={cellsByRowId.get(row.id) ?? new Map()}
+                    isLastRow={index === orderedRows.length - 1}
+                    onCreateRow={handleCreateRow}
                   />
                 ))}
               </SortableContext>
             )}
-            <tr className="border-b border-t border-border bg-muted/20">
-              <td className="w-14 border-r border-border p-1.5 align-middle">
-                <span className="block text-[10px] font-medium leading-tight text-muted-foreground">
-                  {t.tableFormula.footerLabel}
-                </span>
-              </td>
-              {orderedColumns.map((column) => (
-                <td key={column.id} className="border-r border-border p-1.5 align-middle text-sm font-medium text-muted-foreground">
-                  {footerValues.get(column.id) ?? t.tableFormula.none}
+            {hasAnyFormula && (
+              <tr className="border-b border-t border-border bg-muted/20">
+                <td
+                  className="w-14 border-r border-border p-1.5 text-center align-middle text-muted-foreground"
+                  title={t.tableFormula.footerLabel}
+                >
+                  <Sigma className="mx-auto h-3.5 w-3.5" />
                 </td>
-              ))}
-            </tr>
+                {orderedColumns.map((column) => {
+                  const formula = getColumnFormula(column.settings)
+                  const options = getFormulaOptionsForFieldType(column.field_type)
+                  return (
+                    <td key={column.id} className="border-r border-border p-0 align-middle">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            title={t.tableFormula.footerLabel}
+                            className="flex h-8 w-full items-center px-1.5 text-left text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                          >
+                            {footerValues.get(column.id) ?? t.tableFormula.none}
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          {options.map((option) => (
+                            <DropdownMenuItem
+                              key={option}
+                              onSelect={() => setColumnFormula(column, option)}
+                              className={cn(option === formula && 'font-semibold')}
+                            >
+                              {formulaLabel(option)}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  )
+                })}
+              </tr>
+            )}
             <tr>
-              <td colSpan={orderedColumns.length + 2} className="p-1.5">
-                <Button variant="ghost" size="sm" className="font-normal" onClick={handleCreateRow}>
+              <td className="w-14 p-1 align-middle">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="mx-auto flex h-7 w-7 text-muted-foreground hover:text-foreground"
+                  onClick={handleCreateRow}
+                  title={t.table.addRow}
+                  aria-label={t.table.addRow}
+                >
                   <Plus className="h-3.5 w-3.5" />
-                  {t.table.addRow}
                 </Button>
               </td>
             </tr>

@@ -16,9 +16,11 @@ interface TableDataRowProps {
   row: TableRowRow
   columns: TableColumnRow[]
   cellsByColumnId: Map<string, TableCellRow>
+  isLastRow?: boolean
+  onCreateRow?: () => void
 }
 
-export function TableDataRow({ tableId, row, columns, cellsByColumnId }: TableDataRowProps) {
+export function TableDataRow({ tableId, row, columns, cellsByColumnId, isLastRow, onCreateRow }: TableDataRowProps) {
   const deleteRow = useDeleteRow(tableId)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
@@ -54,8 +56,18 @@ export function TableDataRow({ tableId, row, columns, cellsByColumnId }: TableDa
         </div>
       </td>
 
-      {columns.map((column) => (
-        <td key={column.id} className="border-r border-border p-0 align-middle">
+      {columns.map((column, index) => (
+        <td
+          key={column.id}
+          className="border-r border-border p-0 align-middle"
+          onKeyDown={
+            isLastRow && index === columns.length - 1
+              ? (e) => {
+                  if (e.key === 'Enter') onCreateRow?.()
+                }
+              : undefined
+          }
+        >
           <TableCell tableId={tableId} rowId={row.id} column={column} value={cellsByColumnId.get(column.id)?.value} />
         </td>
       ))}
