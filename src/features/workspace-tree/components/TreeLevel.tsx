@@ -1,3 +1,4 @@
+import { t } from '@/i18n'
 import { useTreeData } from '../tree-context'
 import { DropGap } from './DropGap'
 import { TreeNode } from './TreeNode'
@@ -12,7 +13,11 @@ export function TreeLevel({ parentId, depth }: TreeLevelProps) {
   const children = childrenMap.get(parentId) ?? []
 
   if (children.length === 0) {
-    return <DropGap parentId={parentId} before={null} after={null} depth={depth} />
+    return (
+      <div style={{ paddingLeft: depth * 8 + 40 }} className="flex h-7 items-center text-xs italic text-muted-foreground">
+        {t.tree.emptyChildren}
+      </div>
+    )
   }
 
   return (
