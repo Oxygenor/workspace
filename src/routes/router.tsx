@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AuthLayout } from '@/layouts/AuthLayout'
 import { AppLayout } from '@/layouts/AppLayout'
 import { ProtectedRoute, GuestOnlyRoute } from './ProtectedRoute'
+import { RootRedirect } from './RootRedirect'
 
 import LoginPage from '@/pages/auth/LoginPage'
 import RegisterPage from '@/pages/auth/RegisterPage'
@@ -55,6 +56,6 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: '/', element: <Navigate to="/app/home" replace /> },
+  { path: '/', element: <RootRedirect /> },
   { path: '*', element: <NotFoundPage /> },
 ])

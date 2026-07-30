@@ -12,7 +12,7 @@ import { useFavorites } from '@/features/favorites/hooks'
 import { useCreateItem, useWorkspaceItems } from '@/features/workspace-tree/hooks'
 import { CreateItemMenu } from '@/features/workspace-tree/components/CreateItemMenu'
 import { nextAppendPosition } from '@/features/workspace-tree/tree-utils'
-import { useMyAssignedCards, useOverdueCards, useUpcomingCardDeadlines } from '@/features/home/hooks'
+import { useMyAssignedItems, useOverdueDeadlines, useUpcomingDeadlines } from '@/features/home/hooks'
 import { ActivityFeed } from '@/features/activity/components/ActivityFeed'
 import { useUiStore } from '@/stores/ui-store'
 import { Button } from '@/components/ui/button'
@@ -29,9 +29,9 @@ export default function HomePage() {
   const { user } = useAuth()
   const { data: items, isLoading: itemsLoading } = useWorkspaceItems()
   const { data: favorites } = useFavorites()
-  const { data: assignedCards, isLoading: assignedLoading } = useMyAssignedCards()
-  const { data: upcomingDeadlines, isLoading: upcomingLoading } = useUpcomingCardDeadlines()
-  const { data: overdueCards, isLoading: overdueLoading } = useOverdueCards()
+  const { data: assignedItems, isLoading: assignedLoading } = useMyAssignedItems()
+  const { data: upcomingDeadlines, isLoading: upcomingLoading } = useUpcomingDeadlines()
+  const { data: overdueDeadlines, isLoading: overdueLoading } = useOverdueDeadlines()
   const recentItemIds = useUiStore((s) => s.recentItemIds)
   const navigate = useNavigate()
   const createItem = useCreateItem()
@@ -100,7 +100,7 @@ export default function HomePage() {
               <UserCheck className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-2xl font-semibold text-foreground">{assignedLoading ? '—' : assignedCards?.length ?? 0}</p>
+              <p className="text-2xl font-semibold text-foreground">{assignedLoading ? '—' : assignedItems?.length ?? 0}</p>
               <p className="text-xs text-muted-foreground">{t.home.assignedToMe}</p>
             </div>
           </CardContent>
@@ -111,7 +111,7 @@ export default function HomePage() {
               <AlertTriangle className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-2xl font-semibold text-foreground">{overdueLoading ? '—' : overdueCards?.length ?? 0}</p>
+              <p className="text-2xl font-semibold text-foreground">{overdueLoading ? '—' : overdueDeadlines?.length ?? 0}</p>
               <p className="text-xs text-muted-foreground">{t.home.overdueTasks}</p>
             </div>
           </CardContent>
@@ -184,19 +184,19 @@ export default function HomePage() {
           </CardHeader>
           <CardContent className="space-y-1">
             {assignedLoading && <Skeleton className="h-10 w-full" />}
-            {!assignedLoading && (assignedCards?.length ?? 0) === 0 && (
+            {!assignedLoading && (assignedItems?.length ?? 0) === 0 && (
               <p className="text-sm text-muted-foreground">{t.home.noData}</p>
             )}
-            {assignedCards?.slice(0, 5).map((card) => (
+            {assignedItems?.slice(0, 5).map((entry) => (
               <button
-                key={card.id}
-                onClick={() => navigate(`/app/item/${card.board_id}`)}
+                key={`${entry.sourceType}-${entry.id}`}
+                onClick={() => navigate(`/app/item/${entry.targetItemId}`)}
                 className="flex w-full items-center justify-between gap-2 rounded-md p-2 text-left text-sm hover:bg-accent"
               >
-                <span className="truncate">{card.title}</span>
-                {card.due_date && (
+                <span className="truncate">{entry.title}</span>
+                {entry.due_date && (
                   <span className="shrink-0 text-xs text-muted-foreground">
-                    {new Date(card.due_date).toLocaleDateString('uk-UA')}
+                    {new Date(entry.due_date).toLocaleDateString('uk-UA')}
                   </span>
                 )}
               </button>
@@ -216,14 +216,14 @@ export default function HomePage() {
             {!upcomingLoading && (upcomingDeadlines?.length ?? 0) === 0 && (
               <p className="text-sm text-muted-foreground">{t.home.noData}</p>
             )}
-            {upcomingDeadlines?.slice(0, 5).map((card) => (
+            {upcomingDeadlines?.slice(0, 5).map((entry) => (
               <button
-                key={card.id}
-                onClick={() => navigate(`/app/item/${card.board_id}`)}
+                key={`${entry.sourceType}-${entry.id}`}
+                onClick={() => navigate(`/app/item/${entry.targetItemId}`)}
                 className="flex w-full items-center justify-between gap-2 rounded-md p-2 text-left text-sm hover:bg-accent"
               >
-                <span className="truncate">{card.title}</span>
-                <Badge variant="secondary">{new Date(card.due_date!).toLocaleDateString('uk-UA')}</Badge>
+                <span className="truncate">{entry.title}</span>
+                <Badge variant="secondary">{new Date(entry.due_date!).toLocaleDateString('uk-UA')}</Badge>
               </button>
             ))}
           </CardContent>
@@ -238,17 +238,17 @@ export default function HomePage() {
           </CardHeader>
           <CardContent className="space-y-1">
             {overdueLoading && <Skeleton className="h-10 w-full" />}
-            {!overdueLoading && (overdueCards?.length ?? 0) === 0 && (
+            {!overdueLoading && (overdueDeadlines?.length ?? 0) === 0 && (
               <p className="text-sm text-muted-foreground">{t.home.noData}</p>
             )}
-            {overdueCards?.slice(0, 5).map((card) => (
+            {overdueDeadlines?.slice(0, 5).map((entry) => (
               <button
-                key={card.id}
-                onClick={() => navigate(`/app/item/${card.board_id}`)}
+                key={`${entry.sourceType}-${entry.id}`}
+                onClick={() => navigate(`/app/item/${entry.targetItemId}`)}
                 className="flex w-full items-center justify-between gap-2 rounded-md p-2 text-left text-sm hover:bg-accent"
               >
-                <span className="truncate">{card.title}</span>
-                <Badge variant="destructive">{new Date(card.due_date!).toLocaleDateString('uk-UA')}</Badge>
+                <span className="truncate">{entry.title}</span>
+                <Badge variant="destructive">{new Date(entry.due_date!).toLocaleDateString('uk-UA')}</Badge>
               </button>
             ))}
           </CardContent>

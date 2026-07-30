@@ -1,21 +1,21 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { useAuth } from '@/features/auth/use-auth'
-import { fetchMyAssignedCards, fetchOverdueCards, fetchUpcomingCardDeadlines } from './api'
+import { fetchMyAssignedItems, fetchOverdueDeadlines, fetchUpcomingDeadlines } from './api'
 
-export function useMyAssignedCards() {
+export function useMyAssignedItems() {
   const { user } = useAuth()
   return useQuery({
-    queryKey: ['home', 'assigned-cards', user?.id],
-    queryFn: () => fetchMyAssignedCards(user!.id),
+    queryKey: ['home', 'assigned-items', user?.id],
+    queryFn: () => fetchMyAssignedItems(user!.id),
     enabled: Boolean(user?.id),
   })
 }
 
-export function useUpcomingCardDeadlines() {
-  return useQuery({ queryKey: ['home', 'upcoming-deadlines'], queryFn: () => fetchUpcomingCardDeadlines() })
+export function useUpcomingDeadlines() {
+  return useQuery({ queryKey: ['home', 'upcoming-deadlines'], queryFn: () => fetchUpcomingDeadlines() })
 }
 
-export function useOverdueCards() {
-  return useQuery({ queryKey: ['home', 'overdue-cards'], queryFn: () => fetchOverdueCards() })
+export function useOverdueDeadlines() {
+  return useQuery({ queryKey: ['home', 'overdue-deadlines'], queryFn: () => fetchOverdueDeadlines() })
 }
