@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
 import { ChevronRight, MoreHorizontal, Plus, Star } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -93,7 +92,7 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
     }
   }, [isEditing])
 
-  const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
     id: `item:${item.id}`,
     data: { kind: 'item' as const, item },
   })
@@ -137,7 +136,6 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
         {...listeners}
         style={{
           paddingLeft: depth * 8,
-          transform: CSS.Translate.toString(transform),
           backgroundColor: isActive ? undefined : `${item.color}14`,
         }}
         className={cn(
