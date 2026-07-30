@@ -6,9 +6,12 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
+import { t } from '@/i18n'
 import { PRIORITY_CLASSES, PRIORITY_LABELS } from '../priority'
 import type { KanbanCardSummary } from '../types'
 import { useBoardLabels } from '../hooks'
+
+const STALE_DAYS = 7
 
 interface KanbanCardPreviewProps {
   card: KanbanCardSummary
@@ -41,6 +44,7 @@ export function KanbanCardPreview({
 
   const cardLabels = (labels ?? []).filter((l) => card.labelIds.includes(l.id))
   const overdue = isOverdue(card.due_date)
+  const isStale = Date.now() - new Date(card.updated_at).getTime() > STALE_DAYS * 24 * 60 * 60 * 1000
 
   return (
     <Card
@@ -49,9 +53,11 @@ export function KanbanCardPreview({
       {...listeners}
       onClick={onOpen}
       style={{ transform: CSS.Translate.toString(transform) }}
+      title={isStale ? t.staleCard.label : undefined}
       className={cn(
         'relative cursor-pointer space-y-2 p-3 text-sm transition-shadow hover:shadow-md',
         isDragging && 'opacity-40',
+        isStale && 'border-l-2 border-l-amber-500',
       )}
     >
       {selectMode && (

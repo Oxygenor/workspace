@@ -11,12 +11,18 @@ import { CreateItemMenu } from '@/features/workspace-tree/components/CreateItemM
 import { useCreateItem, useWorkspaceItems } from '@/features/workspace-tree/hooks'
 import { nextAppendPosition } from '@/features/workspace-tree/tree-utils'
 import { useCurrentWorkspace } from '@/features/workspace/hooks'
+import { useMyDay } from '@/features/home/hooks'
 import { GlobalTimerWidget } from '@/features/time/components/GlobalTimerWidget'
 import { PomodoroWidget } from '@/features/time/components/PomodoroWidget'
 import { useUiStore } from '@/stores/ui-store'
 import { t } from '@/i18n'
 import { ThemeToggle } from './ThemeToggle'
 import { UserMenu } from './UserMenu'
+
+function formatDueDate(iso: string | null) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
+}
 
 export function Topbar() {
   const { workspace } = useCurrentWorkspace()
@@ -26,6 +32,8 @@ export function Topbar() {
   const { data: items } = useWorkspaceItems()
   const createItem = useCreateItem()
   const navigate = useNavigate()
+  const { data: myDay } = useMyDay()
+  const notifications = [...(myDay?.overdue ?? []), ...(myDay?.today ?? [])]
 
   function handleCreateRoot(type: Parameters<typeof createItem.mutate>[0]['type']) {
     const rootSiblings = (items ?? []).filter((item) => item.parent_id === null)
@@ -88,12 +96,31 @@ export function Topbar() {
 
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label={t.topbar.notifications}>
+            <Button variant="ghost" size="icon" aria-label={t.topbar.notifications} className="relative">
               <Bell className="h-4 w-4" />
+              {notifications.length > 0 && (
+                <span className="absolute right-1 top-1 flex h-2 w-2 rounded-full bg-destructive" />
+              )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-72 text-sm text-muted-foreground">
-            {t.topbar.noNotifications}
+          <PopoverContent align="end" className="w-72 p-1">
+            {notifications.length === 0 ? (
+              <p className="p-3 text-sm text-muted-foreground">{t.topbar.noNotifications}</p>
+            ) : (
+              <div className="max-h-80 space-y-0.5 overflow-y-auto">
+                {notifications.map((entry) => (
+                  <button
+                    key={`${entry.sourceType}-${entry.id}`}
+                    type="button"
+                    className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+                    onClick={() => navigate(`/app/item/${entry.targetItemId}`)}
+                  >
+                    <span className="truncate">{entry.title}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{formatDueDate(entry.due_date)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </PopoverContent>
         </Popover>
 

@@ -21,8 +21,9 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { cn } from '@/lib/utils'
 import { t } from '@/i18n'
 import type { TableColumnRow } from '@/types/database'
-import { FIELD_TYPES, fieldTypeLabel } from '../types'
-import { useDeleteColumn, useRenameColumn, useUpdateColumnType } from '../hooks'
+import { FIELD_TYPES, fieldTypeLabel, formulaLabel, getColumnFormula } from '../types'
+import type { TableFormula } from '../types'
+import { useDeleteColumn, useRenameColumn, useUpdateColumnSettings, useUpdateColumnType } from '../hooks'
 import { ColumnOptionsEditor } from './ColumnOptionsEditor'
 
 interface TableColumnHeaderProps {
@@ -33,6 +34,7 @@ interface TableColumnHeaderProps {
 export function TableColumnHeader({ column, tableId }: TableColumnHeaderProps) {
   const renameColumn = useRenameColumn(tableId)
   const updateColumnType = useUpdateColumnType(tableId)
+  const updateColumnSettings = useUpdateColumnSettings(tableId)
   const deleteColumn = useDeleteColumn(tableId)
 
   const [isEditingName, setIsEditingName] = useState(false)
@@ -55,6 +57,13 @@ export function TableColumnHeader({ column, tableId }: TableColumnHeaderProps) {
   }
 
   const hasOptions = column.field_type === 'select' || column.field_type === 'status'
+  const currentFormula = getColumnFormula(column.settings)
+  const formulaOptions: TableFormula[] =
+    column.field_type === 'number' ? ['none', 'sum', 'avg', 'count'] : ['none', 'count']
+
+  function setFormula(formula: TableFormula) {
+    updateColumnSettings.mutate({ columnId: column.id, settings: { ...column.settings, formula } })
+  }
 
   return (
     <th
@@ -118,6 +127,22 @@ export function TableColumnHeader({ column, tableId }: TableColumnHeaderProps) {
                       onSelect={() => updateColumnType.mutate({ columnId: column.id, fieldType })}
                     >
                       {fieldTypeLabel(fieldType)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>{t.tableFormula.footerLabel}</DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  {formulaOptions.map((formula) => (
+                    <DropdownMenuItem
+                      key={formula}
+                      onSelect={() => setFormula(formula)}
+                      className={cn(formula === currentFormula && 'font-semibold')}
+                    >
+                      {formulaLabel(formula)}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>

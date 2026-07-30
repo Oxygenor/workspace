@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, CalendarClock, CalendarDays, FolderKanban, Plus, Star } from 'lucide-react'
+import { AlertTriangle, CalendarClock, CalendarDays, FolderKanban, Pin, Plus, Star } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,6 +15,7 @@ import { CreateItemMenu } from '@/features/workspace-tree/components/CreateItemM
 import { nextAppendPosition } from '@/features/workspace-tree/tree-utils'
 import { useMyDay, useToggleTaskCompleted, useUpcomingDeadlines } from '@/features/home/hooks'
 import type { DeadlineEntry } from '@/features/home/api'
+import { usePinnedNotes } from '@/features/notes/hooks'
 import { useUiStore } from '@/stores/ui-store'
 import { Button } from '@/components/ui/button'
 
@@ -36,6 +37,7 @@ export default function HomePage() {
   const { data: favorites } = useFavorites()
   const { data: myDay, isLoading: myDayLoading } = useMyDay()
   const { data: upcomingDeadlines, isLoading: upcomingLoading } = useUpcomingDeadlines()
+  const { data: pinnedNotes } = usePinnedNotes()
   const toggleTaskCompleted = useToggleTaskCompleted()
   const navigate = useNavigate()
   const createItem = useCreateItem()
@@ -171,6 +173,32 @@ export default function HomePage() {
           )}
         </CardContent>
       </Card>
+
+      {pinnedNotes && pinnedNotes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Pin className="h-4 w-4" />
+              {t.notesPin.pinnedSectionTitle}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {pinnedNotes.map((note) => {
+              const Icon = resolveIcon(note.icon, note.type)
+              return (
+                <button
+                  key={note.id}
+                  onClick={() => navigate(`/app/item/${note.id}`)}
+                  className="flex w-full items-center gap-2 rounded-md p-2 text-left text-sm hover:bg-accent"
+                >
+                  <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{note.name}</span>
+                </button>
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>

@@ -52,4 +52,12 @@ export const moduleRegistry: Partial<Record<ItemType, ModuleDefinition>> = {
     icon: ICON_MAP.Calendar,
     component: lazy(() => import('@/features/calendar/pages/CalendarPage').then((m) => ({ default: m.CalendarPage }))),
   },
+  reading_list: {
+    type: 'reading_list',
+    title: 'Список читання',
+    icon: ICON_MAP.BookOpen,
+    component: lazy(() =>
+      import('@/features/reading-list/pages/ReadingListPage').then((m) => ({ default: m.ReadingListPage })),
+    ),
+  },
 }

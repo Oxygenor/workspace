@@ -37,6 +37,7 @@ export interface MyDayResult {
 export async function fetchMyDay(): Promise<MyDayResult> {
   const todayStart = startOfToday()
   const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000)
+  const nowIso = new Date().toISOString()
 
   const [cardsResult, tasksResult] = await Promise.all([
     supabase
@@ -50,7 +51,8 @@ export async function fetchMyDay(): Promise<MyDayResult> {
       .select('id, task_list_id, title, due_date, completed')
       .eq('completed', false)
       .not('due_date', 'is', null)
-      .lt('due_date', todayEnd.toISOString()),
+      .lt('due_date', todayEnd.toISOString())
+      .or(`snoozed_until.is.null,snoozed_until.lte.${nowIso}`),
   ])
 
   const cards = throwIfError(cardsResult, 'Не вдалося завантажити дедлайни карток.')
@@ -83,6 +85,7 @@ export async function fetchMyDay(): Promise<MyDayResult> {
 export async function fetchUpcomingDeadlines(withinDays = 7): Promise<DeadlineEntry[]> {
   const from = new Date(startOfToday().getTime() + 24 * 60 * 60 * 1000)
   const until = new Date(from.getTime() + withinDays * 24 * 60 * 60 * 1000)
+  const nowIso = new Date().toISOString()
 
   const [cardsResult, tasksResult] = await Promise.all([
     supabase
@@ -98,7 +101,8 @@ export async function fetchUpcomingDeadlines(withinDays = 7): Promise<DeadlineEn
       .eq('completed', false)
       .not('due_date', 'is', null)
       .gte('due_date', from.toISOString())
-      .lte('due_date', until.toISOString()),
+      .lte('due_date', until.toISOString())
+      .or(`snoozed_until.is.null,snoozed_until.lte.${nowIso}`),
   ])
 
   const cards = throwIfError(cardsResult, 'Не вдалося завантажити дедлайни карток.')

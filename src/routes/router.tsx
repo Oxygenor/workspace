@@ -19,6 +19,7 @@ import TimeReportPage from '@/features/reports/pages/TimeReportPage'
 import WeeklyReviewPage from '@/features/reports/pages/WeeklyReviewPage'
 import ProfilePage from '@/pages/app/settings/ProfilePage'
 import WorkspaceSettingsPage from '@/pages/app/settings/WorkspaceSettingsPage'
+import SplitViewPage from '@/features/split-view/pages/SplitViewPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 
 export const router = createBrowserRouter([
@@ -49,6 +50,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="home" replace /> },
           { path: 'home', element: <HomePage /> },
           { path: 'item/:itemId', element: <ItemPage /> },
+          { path: 'split/:leftId?/:rightId?', element: <SplitViewPage /> },
           { path: 'search', element: <SearchPage /> },
           { path: 'favorites', element: <FavoritesPage /> },
           { path: 'archive', element: <ArchivePage /> },

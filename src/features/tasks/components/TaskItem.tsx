@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Clock, Inbox, Plus, Trash2 } from 'lucide-react'
+import { AlarmClock, Clock, Inbox, Plus, Repeat, Trash2, X } from 'lucide-react'
 
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -13,12 +14,104 @@ import { TimeTrackingSection } from '@/features/time/components/TimeTrackingSect
 import { formatDuration, useRunningTimer, useTotalSecondsForTarget } from '@/features/time/hooks'
 import { cn, openDatePicker } from '@/lib/utils'
 import { nextAppendPosition } from '@/lib/position'
+import { formatDateKey } from '@/lib/parse-date-phrase'
 import { t } from '@/i18n'
-import type { PriorityLevel, TaskRow } from '@/types/database'
+import type { PriorityLevel, TaskRecurrence, TaskRow } from '@/types/database'
 import { useCreateTask, useDeleteTask, useUpdateTask } from '../hooks'
+import { nextOccurrenceDate } from '../recurrence'
 import { AddTaskInput } from './AddTaskInput'
+import { TaskCustomFields } from './TaskCustomFields'
 import { TaskDependencies } from './TaskDependencies'
 import { TaskLabels } from './TaskLabels'
+
+const NONE_RECURRENCE = '__none__'
+
+function isTaskSnoozed(task: TaskRow): boolean {
+  return Boolean(task.snoozed_until && new Date(task.snoozed_until).getTime() > Date.now())
+}
+
+function TaskRecurrenceSelect({ task, taskListId }: { task: TaskRow; taskListId: string }) {
+  const updateTask = useUpdateTask(taskListId)
+
+  return (
+    <Select
+      value={task.recurrence ?? NONE_RECURRENCE}
+      onValueChange={(value) =>
+        updateTask.mutate({
+          taskId: task.id,
+          input: { recurrence: value === NONE_RECURRENCE ? null : (value as TaskRecurrence) },
+        })
+      }
+    >
+      <SelectTrigger
+        className={cn(
+          'h-6 w-auto shrink-0 gap-1 rounded-full border-none px-2 text-xs font-medium shadow-none text-muted-foreground',
+          task.recurrence && 'text-primary',
+        )}
+        title={t.recurrence.label}
+      >
+        <Repeat className="h-3 w-3" />
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={NONE_RECURRENCE}>{t.recurrence.none}</SelectItem>
+        <SelectItem value="daily">{t.recurrence.daily}</SelectItem>
+        <SelectItem value="weekly">{t.recurrence.weekly}</SelectItem>
+        <SelectItem value="monthly">{t.recurrence.monthly}</SelectItem>
+      </SelectContent>
+    </Select>
+  )
+}
+
+function TaskSnoozeControl({ task, taskListId }: { task: TaskRow; taskListId: string }) {
+  const updateTask = useUpdateTask(taskListId)
+  const snoozed = isTaskSnoozed(task)
+
+  function snoozeFor(days: number) {
+    const date = new Date()
+    date.setDate(date.getDate() + days)
+    date.setHours(9, 0, 0, 0)
+    updateTask.mutate({ taskId: task.id, input: { snoozed_until: date.toISOString() } })
+  }
+
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      {snoozed && (
+        <Badge variant="secondary" className="gap-1 pr-1 text-xs font-normal">
+          {t.snooze.snoozedUntil} {new Date(task.snoozed_until!).toLocaleDateString('uk-UA')}
+          <button
+            type="button"
+            onClick={() => updateTask.mutate({ taskId: task.id, input: { snoozed_until: null } })}
+            className="rounded-full p-0.5 hover:bg-muted-foreground/20"
+            title={t.snooze.clear}
+          >
+            <X className="h-2.5 w-2.5" />
+          </button>
+        </Badge>
+      )}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn('h-6 w-6 shrink-0', snoozed ? 'text-primary' : 'opacity-0 group-hover:opacity-100')}
+            title={t.snooze.action}
+          >
+            <AlarmClock className="h-3.5 w-3.5" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-40 space-y-1 p-1" align="start">
+          <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => snoozeFor(1)}>
+            {t.snooze.tomorrow}
+          </Button>
+          <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => snoozeFor(7)}>
+            {t.snooze.nextWeek}
+          </Button>
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
+}
 
 function TaskTimeButton({ taskId, title }: { taskId: string; title: string }) {
   const { data: runningEntry } = useRunningTimer()
@@ -82,23 +175,40 @@ export function TaskItem({
     }
   }
 
-  function handleAddSubtask(title: string) {
-    createTask.mutate({ title, position: nextAppendPosition(subtasks), parentTaskId: task.id })
+  function handleAddSubtask(title: string, dueDate?: string | null) {
+    createTask.mutate({ title, position: nextAppendPosition(subtasks), parentTaskId: task.id, dueDate })
     setIsAddingSubtask(false)
   }
 
+  function handleToggleCompleted(checked: boolean) {
+    if (checked && task.recurrence) {
+      const next = nextOccurrenceDate(task.recurrence, task.due_date)
+      updateTask.mutate({
+        taskId: task.id,
+        input: { completed: false, due_date: formatDateKey(next) },
+      })
+      return
+    }
+    updateTask.mutate({ taskId: task.id, input: { completed: checked } })
+  }
+
+  const snoozed = isTaskSnoozed(task)
+
   return (
     <div className="space-y-1">
-      <div className="group flex flex-wrap items-center gap-2 rounded-md px-1 py-1.5 hover:bg-accent/50">
+      <div
+        className={cn(
+          'group flex flex-wrap items-center gap-2 rounded-md px-1 py-1.5 hover:bg-accent/50',
+          snoozed && 'opacity-50',
+        )}
+      >
         {!isSubtask && selectMode && (
           <Checkbox checked={selected} onCheckedChange={() => onToggleSelect?.(task.id)} />
         )}
 
         <Checkbox
           checked={task.completed}
-          onCheckedChange={(checked) =>
-            updateTask.mutate({ taskId: task.id, input: { completed: checked === true } })
-          }
+          onCheckedChange={(checked) => handleToggleCompleted(checked === true)}
         />
 
         {isEditingTitle ? (
@@ -163,6 +273,8 @@ export function TaskItem({
           className="h-7 shrink-0 rounded-md border border-input bg-transparent px-1.5 text-xs text-muted-foreground shadow-sm"
         />
 
+        <TaskRecurrenceSelect task={task} taskListId={taskListId} />
+
         <TaskLabels task={task} taskListId={taskListId} />
 
         <TagPicker taskId={task.id} />
@@ -170,6 +282,10 @@ export function TaskItem({
         <TaskTimeButton taskId={task.id} title={task.title} />
 
         <TaskDependencies task={task} taskListId={taskListId} />
+
+        <TaskSnoozeControl task={task} taskListId={taskListId} />
+
+        <TaskCustomFields taskId={task.id} taskListId={taskListId} />
 
         <Button
           variant="ghost"

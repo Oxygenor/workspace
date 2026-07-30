@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Tag as TagIcon, Trash2 } from 'lucide-react'
+import { ArrowLeft, Merge, Tag as TagIcon, Trash2 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,19 +8,55 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { resolveIcon } from '@/lib/modules/icon-map'
 import { t } from '@/i18n'
-import { useDeleteTag, useTagLinkCounts, useTagWithLinkedEntities, useWorkspaceTags } from '../hooks'
+import { useDeleteTag, useMergeTags, useTagLinkCounts, useTagWithLinkedEntities, useWorkspaceTags } from '../hooks'
 
 export default function TagsPage() {
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null)
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false)
+  const [mergeConfirmOpen, setMergeConfirmOpen] = useState(false)
+  const [mergeSourceId, setMergeSourceId] = useState<string | undefined>(undefined)
+  const [mergeTargetId, setMergeTargetId] = useState<string | undefined>(undefined)
   const navigate = useNavigate()
 
   const { data: tags, isLoading: tagsLoading } = useWorkspaceTags()
   const tagIds = (tags ?? []).map((tag) => tag.id)
   const { data: counts } = useTagLinkCounts(tagIds)
   const deleteTag = useDeleteTag()
+  const mergeTags = useMergeTags()
+
+  const canMerge = (tags?.length ?? 0) >= 2
+  const mergeSourceOptions = (tags ?? []).filter((tag) => tag.id !== mergeTargetId)
+  const mergeTargetOptions = (tags ?? []).filter((tag) => tag.id !== mergeSourceId)
+
+  function resetMergeSelection() {
+    setMergeSourceId(undefined)
+    setMergeTargetId(undefined)
+  }
+
+  function handleMergeDialogChange(open: boolean) {
+    setMergeDialogOpen(open)
+    if (!open) resetMergeSelection()
+  }
+
+  function handleConfirmMerge() {
+    if (!mergeSourceId || !mergeTargetId) return
+    mergeTags.mutate(
+      { sourceTagId: mergeSourceId, targetTagId: mergeTargetId },
+      {
+        onSuccess: () => {
+          setMergeConfirmOpen(false)
+          setMergeDialogOpen(false)
+          resetMergeSelection()
+        },
+      },
+    )
+  }
 
   const {
     data: detail,
@@ -156,7 +192,20 @@ export default function TagsPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-4 sm:p-6">
-      <h1 className="text-xl font-semibold text-foreground">{t.tags.title}</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-xl font-semibold text-foreground">{t.tags.title}</h1>
+        <span title={canMerge ? undefined : t.tagsMerge.needTwoTags}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!canMerge}
+            onClick={() => setMergeDialogOpen(true)}
+          >
+            <Merge className="h-3.5 w-3.5" />
+            {t.tagsMerge.action}
+          </Button>
+        </span>
+      </div>
 
       {tagsLoading && (
         <div className="space-y-2">
@@ -189,6 +238,69 @@ export default function TagsPage() {
           </Card>
         ))}
       </div>
+
+      <Dialog open={mergeDialogOpen} onOpenChange={handleMergeDialogChange}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t.tagsMerge.action}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>{t.tagsMerge.sourceLabel}</Label>
+              <Select
+                value={mergeSourceId}
+                onValueChange={(value) => setMergeSourceId(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {mergeSourceOptions.map((tag) => (
+                    <SelectItem key={tag.id} value={tag.id}>
+                      {tag.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t.tagsMerge.targetLabel}</Label>
+              <Select
+                value={mergeTargetId}
+                onValueChange={(value) => setMergeTargetId(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {mergeTargetOptions.map((tag) => (
+                    <SelectItem key={tag.id} value={tag.id}>
+                      {tag.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              disabled={!mergeSourceId || !mergeTargetId || mergeSourceId === mergeTargetId}
+              onClick={() => setMergeConfirmOpen(true)}
+            >
+              {t.tagsMerge.action}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={mergeConfirmOpen}
+        onOpenChange={setMergeConfirmOpen}
+        title={t.tagsMerge.confirmTitle}
+        description={t.tagsMerge.confirmDescription}
+        confirmLabel={t.tagsMerge.action}
+        onConfirm={handleConfirmMerge}
+      />
     </div>
   )
 }

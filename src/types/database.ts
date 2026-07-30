@@ -1,7 +1,8 @@
-export type ItemType = 'section' | 'kanban' | 'notes' | 'table' | 'task_list' | 'calendar'
+export type ItemType = 'section' | 'kanban' | 'notes' | 'table' | 'task_list' | 'calendar' | 'reading_list'
 export type MemberRole = 'owner' | 'admin' | 'member' | 'viewer'
 export type PriorityLevel = 'low' | 'medium' | 'high' | 'critical'
 export type TableFieldType = 'text' | 'number' | 'date' | 'checkbox' | 'select' | 'status' | 'url'
+export type TaskRecurrence = 'daily' | 'weekly' | 'monthly'
 
 interface Timestamped {
   created_at: string
@@ -56,6 +57,7 @@ export interface KanbanColumnRow extends Timestamped {
   name: string
   color: string
   position: number
+  wip_limit: number | null
   archived_at: string | null
 }
 
@@ -106,6 +108,7 @@ export interface AttachmentRow {
   id: string
   workspace_id: string
   card_id: string | null
+  item_id: string | null
   storage_path: string
   file_name: string
   mime_type: string | null
@@ -119,6 +122,9 @@ export interface DocumentRow extends Timestamped {
   item_id: string
   content: string
   updated_by: string | null
+  pinned: boolean
+  locked: boolean
+  lock_pin_hash: string | null
 }
 
 export interface TableColumnRow {
@@ -158,6 +164,8 @@ export interface TaskRow extends Timestamped {
   assignee_id: string | null
   labels: string[]
   is_someday: boolean
+  recurrence: TaskRecurrence | null
+  snoozed_until: string | null
   position: number
 }
 
@@ -252,4 +260,32 @@ export interface TelegramLinkCodeRow {
   user_id: string
   created_at: string
   expires_at: string
+}
+
+export interface TaskCustomFieldRow {
+  id: string
+  task_list_id: string
+  name: string
+  field_type: TableFieldType
+  settings: Record<string, unknown>
+  position: number
+}
+
+export interface TaskFieldValueRow {
+  id: string
+  task_id: string
+  field_id: string
+  value: unknown
+  updated_at: string
+}
+
+export interface ReadingListItemRow {
+  id: string
+  list_id: string
+  url: string
+  title: string | null
+  favicon_url: string | null
+  is_read: boolean
+  position: number
+  created_at: string
 }

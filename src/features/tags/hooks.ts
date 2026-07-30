@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 
 import { queryKeys } from '@/lib/query/keys'
 import { useCurrentWorkspace } from '@/features/workspace/hooks'
+import { t } from '@/i18n'
 import {
   attachTag,
   createTag,
@@ -12,6 +13,7 @@ import {
   fetchTagLinkCounts,
   fetchTagWithLinkedEntities,
   fetchWorkspaceTags,
+  mergeTags,
   type TagTarget,
 } from './api'
 
@@ -48,6 +50,23 @@ export function useDeleteTag() {
       queryClient.invalidateQueries({ queryKey: ['tag-links'] })
       queryClient.invalidateQueries({ queryKey: ['tag-detail'] })
       toast.success('Тег видалено')
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+export function useMergeTags() {
+  const { workspace } = useCurrentWorkspace()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ sourceTagId, targetTagId }: { sourceTagId: string; targetTagId: string }) =>
+      mergeTags(sourceTagId, targetTagId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.tags(workspace?.id) })
+      queryClient.invalidateQueries({ queryKey: ['tag-links'] })
+      queryClient.invalidateQueries({ queryKey: ['tag-detail'] })
+      queryClient.invalidateQueries({ queryKey: ['tag-link-counts'] })
+      toast.success(t.tagsMerge.success)
     },
     onError: (error: Error) => toast.error(error.message),
   })

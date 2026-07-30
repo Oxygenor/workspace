@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { ListChecks } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -10,6 +11,7 @@ import type { ModuleComponentProps } from '@/lib/modules/registry'
 import { t } from '@/i18n'
 import type { TaskRow } from '@/types/database'
 import { AddTaskInput } from '../components/AddTaskInput'
+import { TaskFieldsManager } from '../components/TaskFieldsManager'
 import { TaskItem } from '../components/TaskItem'
 import { useBulkDeleteTasks, useBulkUpdateTasks, useCreateTask, useTasks } from '../hooks'
 
@@ -89,8 +91,8 @@ export function TaskListPage({ item }: ModuleComponentProps) {
       .sort((a, b) => a.position - b.position)
   }, [topLevelTasks, mode])
 
-  function handleAddTask(title: string) {
-    createTask.mutate({ title, position: nextAppendPosition(topLevelTasks) })
+  function handleAddTask(title: string, dueDate?: string | null) {
+    createTask.mutate({ title, position: nextAppendPosition(topLevelTasks), dueDate })
   }
 
   function toggleSelectMode() {
@@ -145,15 +147,28 @@ export function TaskListPage({ item }: ModuleComponentProps) {
           </TabsList>
         </Tabs>
 
-        <Button
-          variant={selectMode ? 'secondary' : 'ghost'}
-          size="icon"
-          className="h-8 w-8 shrink-0"
-          title={selectMode ? t.tasks.selectModeDisable : t.tasks.selectModeEnable}
-          onClick={toggleSelectMode}
-        >
-          <ListChecks className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                {t.taskFields.manage}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end">
+              <TaskFieldsManager taskListId={item.id} />
+            </PopoverContent>
+          </Popover>
+
+          <Button
+            variant={selectMode ? 'secondary' : 'ghost'}
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            title={selectMode ? t.tasks.selectModeDisable : t.tasks.selectModeEnable}
+            onClick={toggleSelectMode}
+          >
+            <ListChecks className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <AddTaskInput placeholder={t.tasks.addTask} onSubmit={handleAddTask} />

@@ -16,6 +16,48 @@ export async function updateDocument(itemId: string, content: string, updatedBy:
   if (error) throw toAppError(error, 'Не вдалося зберегти нотатку.')
 }
 
+export async function updateDocumentPinned(itemId: string, pinned: boolean): Promise<void> {
+  const { error } = await supabase.from('documents').update({ pinned }).eq('item_id', itemId)
+  if (error) throw toAppError(error, 'Не вдалося оновити закріплення нотатки.')
+}
+
+export interface UpdateDocumentLockInput {
+  locked: boolean
+  lock_pin_hash: string | null
+}
+
+export async function updateDocumentLock(itemId: string, input: UpdateDocumentLockInput): Promise<void> {
+  const { error } = await supabase.from('documents').update(input).eq('item_id', itemId)
+  if (error) throw toAppError(error, 'Не вдалося оновити захист нотатки.')
+}
+
+export interface PinnedNoteItem {
+  id: string
+  name: string
+  type: ItemType
+  icon: string | null
+  color: string
+}
+
+/**
+ * All pinned notes' workspace items, scoped to `workspaceId`. Follows the
+ * same manual two-query join pattern as `fetchBacklinks` below (no FK embed)
+ * since `documents` and `workspace_items` are queried separately here.
+ */
+export async function fetchPinnedNotes(workspaceId: string): Promise<PinnedNoteItem[]> {
+  const docsResult = await supabase.from('documents').select('item_id').eq('pinned', true)
+  const docs = throwIfError(docsResult, 'Не вдалося завантажити закріплені нотатки.') as { item_id: string }[]
+  if (docs.length === 0) return []
+
+  const itemIds = [...new Set(docs.map((d) => d.item_id))]
+  const itemsResult = await supabase
+    .from('workspace_items')
+    .select('id, name, type, icon, color')
+    .eq('workspace_id', workspaceId)
+    .in('id', itemIds)
+  return throwIfError(itemsResult, 'Не вдалося завантажити закріплені нотатки.')
+}
+
 export interface NoteBacklinkItem {
   id: string
   name: string

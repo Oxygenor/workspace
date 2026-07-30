@@ -188,3 +188,43 @@ generate a link code in the app's Profile → Integrations section, then send
 `/start <code>` to your bot. You should get an immediate ✅ confirmation
 message, and `user_integrations.telegram_chat_id` should be populated for
 your user.
+
+## 8. Reading list link previews — `fetch-link-metadata`
+
+This function backs the "reading list" module (`src/features/reading-list`).
+When a link is added, the frontend calls this function to resolve the
+target page's `<title>` and favicon, since browsers block cross-origin
+fetches of arbitrary third-party pages' HTML — a server-side Deno function
+has no such restriction, so it acts as a small fetch-and-parse proxy.
+
+It accepts `POST { url: string }` and always responds `200` with
+`{ title: string | null, faviconUrl: string | null }` — on any fetch/parse
+failure (dead site, timeout, non-HTML content, etc.) it falls back to
+`{ title: null, faviconUrl: null }` rather than surfacing an error, since
+the caller can't usefully act on the failure reason anyway (the UI just
+falls back to showing the raw URL).
+
+Unlike the three functions above, this one is called directly by our own
+authenticated frontend via `supabase.functions.invoke(...)`, which attaches
+the caller's session JWT automatically — so, unlike those, it must **not**
+be deployed with `--no-verify-jwt`. Deploy it normally:
+
+```sh
+supabase functions deploy fetch-link-metadata
+```
+
+It needs no secrets and never touches the database (no service-role client
+is created inside it) — it's a pure fetch-and-parse proxy.
+
+To test manually (replace `<SUPABASE_ANON_KEY>` and use your own logged-in
+user's JWT as the bearer token, since this endpoint requires a valid
+session):
+
+```sh
+curl -X POST "https://<project-ref>.supabase.co/functions/v1/fetch-link-metadata" \
+  -H "Authorization: Bearer <your-user-jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com"}'
+```
+
+Response looks like `{"title":"Example Domain","faviconUrl":"https://example.com/favicon.ico"}`.

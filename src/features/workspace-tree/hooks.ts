@@ -5,6 +5,7 @@ import { queryKeys } from '@/lib/query/keys'
 import { logActivity } from '@/lib/activity'
 import { useAuth } from '@/features/auth/use-auth'
 import { useCurrentWorkspace } from '@/features/workspace/hooks'
+import { t } from '@/i18n'
 import type { ItemType, WorkspaceItemRow } from '@/types/database'
 import {
   archiveWorkspaceItem,
@@ -144,7 +145,16 @@ export function useArchiveItem() {
     mutationFn: (itemId: string) => archiveWorkspaceItem(itemId),
     onSuccess: (item) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaceItems(workspace?.id) })
-      toast.success('Елемент архівовано')
+      toast.success(t.undo.archived, {
+        action: {
+          label: t.undo.actionLabel,
+          onClick: () => {
+            restoreWorkspaceItem(item.id)
+              .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.workspaceItems(workspace?.id) }))
+              .catch((error: Error) => toast.error(error.message))
+          },
+        },
+      })
       logActivity(workspace?.id, user?.id, 'workspace_item', item.id, 'archived', { name: item.name })
     },
     onError: (error: Error) => toast.error(error.message),

@@ -22,6 +22,7 @@ import {
   updateChecklistItem,
   updateComment,
   uploadAttachment,
+  uploadVoiceNote,
   type UpdateCardInput,
 } from './api'
 
@@ -159,6 +160,20 @@ export function useUploadAttachment(cardId: string, boardId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (file: File) => uploadAttachment(workspace!.id, cardId, user!.id, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.cardAttachments(cardId) })
+      invalidateCard(queryClient, cardId, boardId)
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+export function useUploadVoiceNote(cardId: string, boardId: string) {
+  const { user } = useAuth()
+  const { workspace } = useCurrentWorkspace()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (blob: Blob) => uploadVoiceNote(workspace!.id, cardId, user!.id, blob),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.cardAttachments(cardId) })
       invalidateCard(queryClient, cardId, boardId)

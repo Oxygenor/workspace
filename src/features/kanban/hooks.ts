@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 
 import { queryKeys } from '@/lib/query/keys'
 import { useAuth } from '@/features/auth/use-auth'
+import { t } from '@/i18n'
 import type { KanbanColumnRow } from '@/types/database'
 import type { KanbanCardSummary } from './types'
 import {
@@ -21,7 +22,10 @@ import {
   renameColumn,
   reorderCard,
   reorderColumn,
+  restoreCard,
+  restoreColumn,
   updateColumnColor,
+  updateColumnWipLimit,
 } from './api'
 
 export function useColumns(boardId: string) {
@@ -63,6 +67,16 @@ export function useUpdateColumnColor(boardId: string) {
   })
 }
 
+export function useUpdateColumnWipLimit(boardId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ columnId, wipLimit }: { columnId: string; wipLimit: number | null }) =>
+      updateColumnWipLimit(columnId, wipLimit),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) }),
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
 export function useReorderColumn(boardId: string) {
   const queryClient = useQueryClient()
   const key = queryKeys.kanbanColumns(boardId)
@@ -88,9 +102,18 @@ export function useArchiveColumn(boardId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (columnId: string) => archiveColumn(columnId),
-    onSuccess: () => {
+    onSuccess: (_data, columnId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) })
-      toast.success('Колонку архівовано')
+      toast.success(t.undo.archived, {
+        action: {
+          label: t.undo.actionLabel,
+          onClick: () => {
+            restoreColumn(columnId)
+              .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) }))
+              .catch((error: Error) => toast.error(error.message))
+          },
+        },
+      })
     },
     onError: (error: Error) => toast.error(error.message),
   })
@@ -173,9 +196,18 @@ export function useArchiveCard(boardId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (cardId: string) => archiveCard(cardId),
-    onSuccess: () => {
+    onSuccess: (_data, cardId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.kanbanCards(boardId) })
-      toast.success('Картку архівовано')
+      toast.success(t.undo.archived, {
+        action: {
+          label: t.undo.actionLabel,
+          onClick: () => {
+            restoreCard(cardId)
+              .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.kanbanCards(boardId) }))
+              .catch((error: Error) => toast.error(error.message))
+          },
+        },
+      })
     },
     onError: (error: Error) => toast.error(error.message),
   })

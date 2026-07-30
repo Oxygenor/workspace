@@ -153,8 +153,8 @@ export async function uploadAttachment(
   return throwIfError(result, 'Файл завантажено, але не вдалося зберегти запис.')
 }
 
-export async function getAttachmentDownloadUrl(storagePath: string): Promise<string> {
-  const { data, error } = await supabase.storage.from('attachments').createSignedUrl(storagePath, 60 * 5)
+export async function getAttachmentDownloadUrl(storagePath: string, expiresInSeconds = 60 * 5): Promise<string> {
+  const { data, error } = await supabase.storage.from('attachments').createSignedUrl(storagePath, expiresInSeconds)
   if (error || !data) throw toAppError(error, 'Не вдалося отримати посилання на файл.')
   return data.signedUrl
 }
@@ -165,4 +165,38 @@ export async function deleteAttachment(attachmentId: string, storagePath: string
 
   const { error } = await supabase.from('attachments').delete().eq('id', attachmentId)
   if (error) throw toAppError(error, 'Не вдалося видалити запис про вкладення.')
+}
+
+export async function uploadVoiceNote(
+  workspaceId: string,
+  cardId: string,
+  uploadedBy: string,
+  blob: Blob,
+): Promise<AttachmentRow> {
+  const mimeType = blob.type || 'audio/webm'
+  const fileName = `voice-${Date.now()}.webm`
+  const path = `${workspaceId}/${cardId}/${Date.now()}-${fileName}`
+
+  const { error: uploadError } = await supabase.storage.from('attachments').upload(path, blob, {
+    contentType: mimeType,
+  })
+  if (uploadError) {
+    throw toAppError(uploadError, 'Не вдалося завантажити голосову нотатку.')
+  }
+
+  const result = await supabase
+    .from('attachments')
+    .insert({
+      workspace_id: workspaceId,
+      card_id: cardId,
+      storage_path: path,
+      file_name: fileName,
+      mime_type: mimeType,
+      file_size: blob.size,
+      uploaded_by: uploadedBy,
+    })
+    .select('*')
+    .single()
+
+  return throwIfError(result, 'Голосову нотатку завантажено, але не вдалося зберегти запис.')
 }

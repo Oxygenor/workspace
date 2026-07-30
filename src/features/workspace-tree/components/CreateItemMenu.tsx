@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Calendar, FileText, FolderPlus, KanbanSquare, LayoutTemplate, ListTodo, Table } from 'lucide-react'
+import { BookOpen, Calendar, FileText, FolderPlus, KanbanSquare, LayoutTemplate, ListTodo, Table } from 'lucide-react'
 
 import {
   DropdownMenu,
@@ -24,6 +24,7 @@ const MENU_ITEMS: { type: ItemType; label: string; icon: typeof FolderPlus }[] =
   { type: 'table', label: t.create.table, icon: Table },
   { type: 'task_list', label: t.create.taskList, icon: ListTodo },
   { type: 'calendar', label: t.create.calendar, icon: Calendar },
+  { type: 'reading_list', label: t.create.readingList, icon: BookOpen },
 ]
 
 interface CreateItemMenuProps {

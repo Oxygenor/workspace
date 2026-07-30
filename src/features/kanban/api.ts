@@ -109,6 +109,16 @@ export async function updateColumnColor(columnId: string, color: string): Promis
   return throwIfError(result, 'Не вдалося змінити колір колонки.')
 }
 
+export async function updateColumnWipLimit(columnId: string, wipLimit: number | null): Promise<KanbanColumnRow> {
+  const result = await supabase
+    .from('kanban_columns')
+    .update({ wip_limit: wipLimit })
+    .eq('id', columnId)
+    .select('*')
+    .single()
+  return throwIfError(result, 'Не вдалося оновити ліміт колонки.')
+}
+
 export async function reorderColumn(columnId: string, position: number): Promise<void> {
   const { error } = await supabase.from('kanban_columns').update({ position }).eq('id', columnId)
   if (error) throw toAppError(error, 'Не вдалося змінити порядок колонок.')
@@ -120,6 +130,11 @@ export async function archiveColumn(columnId: string): Promise<void> {
     .update({ archived_at: new Date().toISOString() })
     .eq('id', columnId)
   if (error) throw toAppError(error, 'Не вдалося архівувати колонку.')
+}
+
+export async function restoreColumn(columnId: string): Promise<void> {
+  const { error } = await supabase.from('kanban_columns').update({ archived_at: null }).eq('id', columnId)
+  if (error) throw toAppError(error, 'Не вдалося відновити колонку.')
 }
 
 export async function deleteColumn(columnId: string): Promise<void> {
@@ -170,6 +185,11 @@ export async function archiveCard(cardId: string): Promise<void> {
     .update({ archived_at: new Date().toISOString() })
     .eq('id', cardId)
   if (error) throw toAppError(error, 'Не вдалося архівувати картку.')
+}
+
+export async function restoreCard(cardId: string): Promise<void> {
+  const { error } = await supabase.from('kanban_cards').update({ archived_at: null }).eq('id', cardId)
+  if (error) throw toAppError(error, 'Не вдалося відновити картку.')
 }
 
 export async function deleteCard(cardId: string): Promise<void> {

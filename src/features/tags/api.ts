@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase/client'
 import { throwIfError, toAppError } from '@/lib/supabase/errors'
-import type { ItemType, TagRow } from '@/types/database'
+import type { ItemType, TagLinkRow, TagRow } from '@/types/database'
 
 export interface TagTarget {
   itemId?: string
@@ -53,6 +53,30 @@ export async function createTag(workspaceId: string, name: string, color: string
 export async function deleteTag(tagId: string): Promise<void> {
   const { error } = await supabase.from('tags').delete().eq('id', tagId)
   if (error) throw toAppError(error, 'Не вдалося видалити тег.')
+}
+
+export async function mergeTags(sourceTagId: string, targetTagId: string): Promise<void> {
+  const linksResult = await supabase.from('tag_links').select('*').eq('tag_id', sourceTagId)
+  const links = throwIfError(linksResult, 'Не вдалося завантажити зв’язки тегу.') as TagLinkRow[]
+
+  for (const link of links) {
+    const row = {
+      tag_id: targetTagId,
+      item_id: link.item_id,
+      card_id: link.card_id,
+      task_id: link.task_id,
+    }
+    const onConflict = link.item_id ? 'tag_id,item_id' : link.card_id ? 'tag_id,card_id' : 'tag_id,task_id'
+
+    // ignoreDuplicates -> INSERT ... ON CONFLICT DO NOTHING: no-ops if the target tag is
+    // already linked to the same item/card/task, without requiring UPDATE privileges
+    // (tag_links only has insert/select/delete RLS policies, no update policy).
+    const { error } = await supabase.from('tag_links').upsert(row, { onConflict, ignoreDuplicates: true })
+    if (error) throw toAppError(error, 'Не вдалося об’єднати теги.')
+  }
+
+  const { error: deleteError } = await supabase.from('tags').delete().eq('id', sourceTagId)
+  if (deleteError) throw toAppError(deleteError, 'Не вдалося об’єднати теги.')
 }
 
 export async function fetchTagLinkCounts(tagIds: string[]): Promise<Record<string, number>> {

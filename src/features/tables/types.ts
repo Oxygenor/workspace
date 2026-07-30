@@ -30,6 +30,26 @@ export function fieldTypeLabel(fieldType: TableFieldType): string {
   }
 }
 
+export type TableFormula = 'none' | 'sum' | 'avg' | 'count'
+
+export function getColumnFormula(settings: Record<string, unknown>): TableFormula {
+  const formula = (settings as { formula?: unknown }).formula
+  return formula === 'sum' || formula === 'avg' || formula === 'count' ? formula : 'none'
+}
+
+export function formulaLabel(formula: TableFormula): string {
+  switch (formula) {
+    case 'none':
+      return t.tableFormula.none
+    case 'sum':
+      return t.tableFormula.sum
+    case 'avg':
+      return t.tableFormula.avg
+    case 'count':
+      return t.tableFormula.count
+  }
+}
+
 export function getColumnOptions(settings: Record<string, unknown>): TableSelectOption[] {
   const options = (settings as { options?: unknown }).options
   if (!Array.isArray(options)) return []

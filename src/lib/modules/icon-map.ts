@@ -57,6 +57,7 @@ export const DEFAULT_TYPE_ICON: Record<ItemType, string> = {
   table: 'Table',
   task_list: 'ListTodo',
   calendar: 'Calendar',
+  reading_list: 'BookOpen',
 }
 
 export function resolveIcon(iconName: string | null | undefined, type: ItemType): LucideIcon {

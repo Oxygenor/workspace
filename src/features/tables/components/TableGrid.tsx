@@ -11,8 +11,26 @@ import { computeGapPosition, nextAppendPosition } from '@/lib/position'
 import { t } from '@/i18n'
 import type { TableCellRow, TableColumnRow, TableRowRow } from '@/types/database'
 import { useCreateColumn, useCreateRow, useReorderColumn, useReorderRow, useTableCells, useTableColumns, useTableRows } from '../hooks'
+import { getColumnFormula } from '../types'
 import { TableColumnHeader } from './TableColumnHeader'
 import { TableDataRow } from './TableDataRow'
+
+function isNonEmptyValue(value: unknown): boolean {
+  return value !== null && value !== undefined && value !== ''
+}
+
+function toNumericValue(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
+}
+
+function roundDisplay(value: number): string {
+  return String(Math.round(value * 100) / 100)
+}
 
 interface TableGridProps {
   tableId: string
@@ -44,6 +62,29 @@ export function TableGrid({ tableId }: TableGridProps) {
     }
     return map
   }, [cells])
+
+  const footerValues = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const column of columns ?? []) {
+      const formula = getColumnFormula(column.settings)
+      if (formula === 'none') continue
+
+      const values = (rows ?? []).map((row) => cellsByRowId.get(row.id)?.get(column.id)?.value)
+
+      if (formula === 'count') {
+        map.set(column.id, String(values.filter(isNonEmptyValue).length))
+        continue
+      }
+
+      const numbers = values.map(toNumericValue).filter((n): n is number => n !== null)
+      if (formula === 'sum') {
+        map.set(column.id, roundDisplay(numbers.reduce((acc, n) => acc + n, 0)))
+      } else if (formula === 'avg' && numbers.length > 0) {
+        map.set(column.id, roundDisplay(numbers.reduce((acc, n) => acc + n, 0) / numbers.length))
+      }
+    }
+    return map
+  }, [columns, rows, cellsByRowId])
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -171,6 +212,18 @@ export function TableGrid({ tableId }: TableGridProps) {
                 ))}
               </SortableContext>
             )}
+            <tr className="border-b border-t border-border bg-muted/20">
+              <td className="w-14 border-r border-border p-1.5 align-middle">
+                <span className="block text-[10px] font-medium leading-tight text-muted-foreground">
+                  {t.tableFormula.footerLabel}
+                </span>
+              </td>
+              {orderedColumns.map((column) => (
+                <td key={column.id} className="border-r border-border p-1.5 align-middle text-sm font-medium text-muted-foreground">
+                  {footerValues.get(column.id) ?? t.tableFormula.none}
+                </td>
+              ))}
+            </tr>
             <tr>
               <td colSpan={orderedColumns.length + 2} className="p-1.5">
                 <Button variant="ghost" size="sm" className="font-normal" onClick={handleCreateRow}>

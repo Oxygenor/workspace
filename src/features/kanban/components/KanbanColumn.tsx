@@ -26,6 +26,7 @@ import {
   useDeleteColumn,
   useRenameColumn,
   useUpdateColumnColor,
+  useUpdateColumnWipLimit,
 } from '../hooks'
 import { CardDropGap } from './CardDropGap'
 import { KanbanCardPreview } from './KanbanCardPreview'
@@ -51,6 +52,7 @@ export function KanbanColumn({
 }: KanbanColumnProps) {
   const renameColumn = useRenameColumn(boardId)
   const updateColor = useUpdateColumnColor(boardId)
+  const updateWipLimit = useUpdateColumnWipLimit(boardId)
   const archiveColumn = useArchiveColumn(boardId)
   const deleteColumn = useDeleteColumn(boardId)
   const createCard = useCreateCard(boardId)
@@ -60,6 +62,9 @@ export function KanbanColumn({
   const [isAddingCard, setIsAddingCard] = useState(false)
   const [newCardTitle, setNewCardTitle] = useState('')
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [draftWipLimit, setDraftWipLimit] = useState(column.wip_limit ? String(column.wip_limit) : '')
+
+  const wipLimitExceeded = column.wip_limit != null && cards.length > column.wip_limit
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `column:${column.id}`,
@@ -74,6 +79,16 @@ export function KanbanColumn({
     } else {
       setDraftName(column.name)
     }
+  }
+
+  function commitWipLimit() {
+    const trimmed = draftWipLimit.trim()
+    const parsed = trimmed ? Number.parseInt(trimmed, 10) : 0
+    const nextLimit = !parsed || parsed <= 0 ? null : parsed
+    if (nextLimit !== column.wip_limit) {
+      updateWipLimit.mutate({ columnId: column.id, wipLimit: nextLimit })
+    }
+    setDraftWipLimit(nextLimit ? String(nextLimit) : '')
   }
 
   function handleAddCard() {
@@ -122,8 +137,14 @@ export function KanbanColumn({
           </button>
         )}
 
-        <span className="shrink-0 rounded-full bg-background px-1.5 py-0.5 text-xs text-muted-foreground">
-          {cards.length}
+        <span
+          className={cn(
+            'shrink-0 rounded-full bg-background px-1.5 py-0.5 text-xs text-muted-foreground',
+            wipLimitExceeded && 'bg-destructive/15 font-semibold text-destructive',
+          )}
+          title={wipLimitExceeded ? t.wipLimit.exceeded : undefined}
+        >
+          {column.wip_limit != null ? `${cards.length}/${column.wip_limit}` : cards.length}
         </span>
 
         <DropdownMenu>
@@ -147,6 +168,22 @@ export function KanbanColumn({
                     onClick={() => updateColor.mutate({ columnId: column.id, color })}
                   />
                 ))}
+              </PopoverContent>
+            </Popover>
+            <Popover onOpenChange={(open) => !open && commitWipLimit()}>
+              <PopoverTrigger asChild>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>{t.wipLimit.label}</DropdownMenuItem>
+              </PopoverTrigger>
+              <PopoverContent className="w-40" align="start">
+                <Input
+                  type="number"
+                  min={0}
+                  value={draftWipLimit}
+                  onChange={(e) => setDraftWipLimit(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && commitWipLimit()}
+                  placeholder={t.wipLimit.placeholder}
+                  className="h-8"
+                />
               </PopoverContent>
             </Popover>
             <DropdownMenuSeparator />

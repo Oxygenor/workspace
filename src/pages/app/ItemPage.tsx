@@ -160,6 +160,9 @@ export default function ItemPage() {
               {item.type === 'section' && (
                 <DropdownMenuItem onSelect={() => setSaveTemplateOpen(true)}>{t.templates.saveAsTemplate}</DropdownMenuItem>
               )}
+              {item.type !== 'section' && (
+                <DropdownMenuItem onSelect={() => navigate(`/app/split/${item.id}`)}>{t.splitView.open}</DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => setConfirmOpen('archive')}>{t.common.archive}</DropdownMenuItem>
               <DropdownMenuItem
