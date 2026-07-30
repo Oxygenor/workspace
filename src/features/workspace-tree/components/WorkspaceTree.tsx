@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { closestCenter, DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { toast } from 'sonner'
 
@@ -22,7 +22,7 @@ export function WorkspaceTree() {
     return { itemMap: buildItemMap(list), childrenMap: buildChildrenMap(list) }
   }, [items])
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { delay: 2000, tolerance: 5 } }))
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { delay: 1000, tolerance: 5 } }))
 
   function handleDragStart(event: DragStartEvent) {
     const data = event.active.data.current as { kind: 'item'; item: WorkspaceItemRow } | undefined
@@ -94,7 +94,7 @@ export function WorkspaceTree() {
   const ActiveIcon = activeItem ? resolveIcon(activeItem.icon, activeItem.type) : null
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <TreeDataProvider value={treeData}>
         <TreeLevel parentId={null} depth={0} />
       </TreeDataProvider>

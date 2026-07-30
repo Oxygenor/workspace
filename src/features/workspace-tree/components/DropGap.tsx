@@ -20,9 +20,9 @@ export function DropGap({ parentId, before, after, depth }: DropGapProps) {
     <div
       ref={setNodeRef}
       style={{ paddingLeft: depth * 8 }}
-      className="relative h-1.5"
+      className="relative flex h-3 items-center"
     >
-      <div className={cn('mx-2 h-0.5 rounded-full transition-colors', isOver && 'bg-primary')} />
+      <div className={cn('mx-2 h-0.5 flex-1 rounded-full transition-colors', isOver && 'bg-primary')} />
     </div>
   )
 }
