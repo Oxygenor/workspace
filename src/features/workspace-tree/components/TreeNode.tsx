@@ -145,17 +145,19 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
           isDragging && 'opacity-40',
         )}
       >
-        <button
-          type="button"
-          className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded', !isSection && 'invisible')}
-          onClick={() => toggleExpanded(item.id)}
-          aria-label={expanded ? 'Згорнути' : 'Розгорнути'}
-        >
-          <ChevronRight
-            className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-90')}
-            style={{ color: item.color }}
-          />
-        </button>
+        {isSection && (
+          <button
+            type="button"
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded"
+            onClick={() => toggleExpanded(item.id)}
+            aria-label={expanded ? 'Згорнути' : 'Розгорнути'}
+          >
+            <ChevronRight
+              className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-90')}
+              style={{ color: item.color }}
+            />
+          </button>
+        )}
 
         <IconPicker
           value={item.icon ?? ''}
