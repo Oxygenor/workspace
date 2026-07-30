@@ -191,12 +191,12 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
                 setIsEditing(false)
               }
             }}
-            className="h-6 flex-1 px-1 py-0 text-sm"
+            className="h-6 min-w-0 flex-1 px-1 py-0 text-sm"
           />
         ) : (
           <button
             type="button"
-            className="flex-1 truncate text-left"
+            className="min-w-0 flex-1 truncate text-left"
             onClick={() => navigate(`/app/item/${item.id}`)}
             onDoubleClick={() => setIsEditing(true)}
           >
