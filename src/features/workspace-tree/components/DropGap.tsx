@@ -17,12 +17,11 @@ export function DropGap({ parentId, before, after, depth }: DropGapProps) {
   })
 
   return (
-    <div
-      ref={setNodeRef}
-      style={{ paddingLeft: depth * 8 }}
-      className="relative flex h-3 items-center"
-    >
-      <div className={cn('mx-2 h-0.5 flex-1 rounded-full transition-colors', isOver && 'bg-primary')} />
+    <div ref={setNodeRef} className="relative flex h-3 items-center">
+      <div
+        style={{ marginLeft: depth * 12 + 8 }}
+        className={cn('mr-2 h-0.5 flex-1 rounded-full transition-colors', isOver && 'bg-primary')}
+      />
     </div>
   )
 }

@@ -135,11 +135,11 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
         {...attributes}
         {...listeners}
         style={{
-          paddingLeft: depth * 8,
+          marginLeft: depth * 12,
           backgroundColor: isActive ? undefined : `${item.color}14`,
         }}
         className={cn(
-          'group flex h-8 cursor-grab items-center gap-1 rounded-md pr-1 text-sm transition-colors active:cursor-grabbing',
+          'group flex h-8 cursor-grab items-center gap-1 rounded-md pl-1.5 pr-1 text-sm transition-colors active:cursor-grabbing',
           isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground hover:bg-sidebar-accent/60',
           isOver && 'ring-1 ring-inset ring-primary',
           isDragging && 'opacity-40',

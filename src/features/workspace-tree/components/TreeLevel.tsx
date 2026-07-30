@@ -14,7 +14,7 @@ export function TreeLevel({ parentId, depth }: TreeLevelProps) {
 
   if (children.length === 0) {
     return (
-      <div style={{ paddingLeft: depth * 8 + 40 }} className="flex h-7 items-center text-xs italic text-muted-foreground">
+      <div style={{ marginLeft: depth * 12 }} className="flex h-7 items-center pl-10 text-xs italic text-muted-foreground">
         {t.tree.emptyChildren}
       </div>
     )
