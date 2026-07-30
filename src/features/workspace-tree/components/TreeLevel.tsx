@@ -21,7 +21,13 @@ export function TreeLevel({ parentId, depth }: TreeLevelProps) {
       {children.map((child, index) => (
         <div key={child.id}>
           <TreeNode item={child} depth={depth} />
-          <DropGap parentId={parentId} before={child} after={children[index + 1] ?? null} depth={depth} />
+          {/* No trailing gap after the last child — dropping directly on a section's own row
+              already appends to the end of its children, so a gap here would just be a
+              redundant drop target that visually stacks with the same gap at every ancestor
+              level whose last (possibly nested) descendant is currently expanded. */}
+          {index < children.length - 1 && (
+            <DropGap parentId={parentId} before={child} after={children[index + 1]} depth={depth} />
+          )}
         </div>
       ))}
     </div>
