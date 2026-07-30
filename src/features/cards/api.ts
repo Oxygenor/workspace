@@ -2,7 +2,6 @@ import { supabase } from '@/lib/supabase/client'
 import { throwIfError, toAppError } from '@/lib/supabase/errors'
 import type {
   AttachmentRow,
-  CardAssigneeRow,
   ChecklistItemRow,
   CommentRow,
   KanbanCardRow,
@@ -27,21 +26,6 @@ export interface UpdateCardInput {
 export async function updateCard(cardId: string, input: UpdateCardInput): Promise<KanbanCardRow> {
   const result = await supabase.from('kanban_cards').update(input).eq('id', cardId).select('*').single()
   return throwIfError(result, 'Не вдалося оновити картку.')
-}
-
-export async function fetchCardAssignees(cardId: string): Promise<CardAssigneeRow[]> {
-  const result = await supabase.from('card_assignees').select('*').eq('card_id', cardId)
-  return throwIfError(result, 'Не вдалося завантажити виконавців.')
-}
-
-export async function addCardAssignee(cardId: string, userId: string): Promise<void> {
-  const { error } = await supabase.from('card_assignees').insert({ card_id: cardId, user_id: userId })
-  if (error) throw toAppError(error, 'Не вдалося додати виконавця.')
-}
-
-export async function removeCardAssignee(cardId: string, userId: string): Promise<void> {
-  const { error } = await supabase.from('card_assignees').delete().eq('card_id', cardId).eq('user_id', userId)
-  if (error) throw toAppError(error, 'Не вдалося прибрати виконавця.')
 }
 
 export async function fetchCardLabelIds(cardId: string): Promise<string[]> {

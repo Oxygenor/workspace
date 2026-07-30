@@ -31,26 +31,17 @@ export async function fetchKanbanCards(boardId: string): Promise<KanbanCardSumma
 
   const cardIds = cards.map((c) => c.id)
 
-  const [assigneesRes, cardLabelsRes, checklistRes, commentsRes, attachmentsRes] = await Promise.all([
-    supabase.from('card_assignees').select('card_id, user_id').in('card_id', cardIds),
+  const [cardLabelsRes, checklistRes, commentsRes, attachmentsRes] = await Promise.all([
     supabase.from('card_labels').select('card_id, label_id').in('card_id', cardIds),
     supabase.from('checklist_items').select('card_id, completed').in('card_id', cardIds),
     supabase.from('comments').select('id, card_id').in('card_id', cardIds),
     supabase.from('attachments').select('id, card_id').in('card_id', cardIds),
   ])
 
-  const assignees = throwIfError(assigneesRes, 'Не вдалося завантажити виконавців.')
   const cardLabels = throwIfError(cardLabelsRes, 'Не вдалося завантажити мітки карток.')
   const checklist = throwIfError(checklistRes, 'Не вдалося завантажити чекліст.')
   const comments = throwIfError(commentsRes, 'Не вдалося завантажити коментарі.')
   const attachments = throwIfError(attachmentsRes, 'Не вдалося завантажити вкладення.')
-
-  const assigneesByCard = new Map<string, string[]>()
-  for (const row of assignees) {
-    const list = assigneesByCard.get(row.card_id) ?? []
-    list.push(row.user_id)
-    assigneesByCard.set(row.card_id, list)
-  }
 
   const labelsByCard = new Map<string, string[]>()
   for (const row of cardLabels) {
@@ -80,7 +71,6 @@ export async function fetchKanbanCards(boardId: string): Promise<KanbanCardSumma
 
   return cards.map((card) => ({
     ...card,
-    assigneeIds: assigneesByCard.get(card.id) ?? [],
     labelIds: labelsByCard.get(card.id) ?? [],
     checklistTotal: checklistByCard.get(card.id)?.total ?? 0,
     checklistCompleted: checklistByCard.get(card.id)?.completed ?? 0,

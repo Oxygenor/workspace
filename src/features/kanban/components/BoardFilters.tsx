@@ -9,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useCurrentWorkspace, useWorkspaceMembers } from '@/features/workspace/hooks'
 import { useKanbanFiltersStore } from '@/stores/kanban-filters-store'
 import { t } from '@/i18n'
 import { PRIORITY_LABELS, PRIORITY_ORDER } from '../priority'
@@ -21,8 +20,6 @@ interface BoardFiltersProps {
 }
 
 export function BoardFilters({ boardId }: BoardFiltersProps) {
-  const { workspace } = useCurrentWorkspace()
-  const { data: members } = useWorkspaceMembers(workspace?.id)
   const { data: labels } = useBoardLabels(boardId)
   const filters = useKanbanFiltersStore((s) => s.filtersByBoard[boardId] ?? EMPTY_FILTERS)
   const setFilter = useKanbanFiltersStore((s) => s.setFilter)
@@ -42,26 +39,6 @@ export function BoardFilters({ boardId }: BoardFiltersProps) {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72 space-y-3" align="start">
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">{t.kanban.assignee}</label>
-          <Select
-            value={filters.assigneeId ?? '__all__'}
-            onValueChange={(value) => setFilter(boardId, { assigneeId: value === '__all__' ? null : value })}
-          >
-            <SelectTrigger className="h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">{t.common.search}</SelectItem>
-              {members?.map((m) => (
-                <SelectItem key={m.user_id} value={m.user_id}>
-                  {m.profile?.full_name ?? '—'}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">{t.kanban.priority}</label>
           <Select

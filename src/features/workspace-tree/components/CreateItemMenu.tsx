@@ -25,11 +25,12 @@ interface CreateItemMenuProps {
   children: ReactNode
   onSelect: (type: ItemType) => void
   align?: 'start' | 'end' | 'center'
+  onOpenChange?: (open: boolean) => void
 }
 
-export function CreateItemMenu({ children, onSelect, align = 'start' }: CreateItemMenuProps) {
+export function CreateItemMenu({ children, onSelect, align = 'start', onOpenChange }: CreateItemMenuProps) {
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="w-56">
         <DropdownMenuLabel>{t.create.title}</DropdownMenuLabel>

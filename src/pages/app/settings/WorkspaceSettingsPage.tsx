@@ -1,26 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useCurrentWorkspace, useRenameWorkspace, useWorkspaceMembers } from '@/features/workspace/hooks'
+import { useCurrentWorkspace, useRenameWorkspace } from '@/features/workspace/hooks'
 import { t } from '@/i18n'
-
-const ROLE_LABELS: Record<string, string> = {
-  owner: t.workspaceSettings.roleOwner,
-  admin: t.workspaceSettings.roleAdmin,
-  member: t.workspaceSettings.roleMember,
-  viewer: t.workspaceSettings.roleViewer,
-}
 
 export default function WorkspaceSettingsPage() {
   const { workspace, isLoading } = useCurrentWorkspace()
-  const { data: members, isLoading: membersLoading } = useWorkspaceMembers(workspace?.id)
   const renameWorkspace = useRenameWorkspace(workspace?.id)
   const [name, setName] = useState('')
 
@@ -64,25 +54,6 @@ export default function WorkspaceSettingsPage() {
               {t.common.save}
             </Button>
           </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t.workspaceSettings.members}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {membersLoading && <Skeleton className="h-12 w-full" />}
-          {members?.map((member) => (
-            <div key={member.id} className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={member.profile?.avatar_url ?? undefined} />
-                <AvatarFallback>{(member.profile?.full_name ?? '?').slice(0, 2).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <span className="flex-1 truncate text-sm text-foreground">{member.profile?.full_name ?? '—'}</span>
-              <Badge variant="secondary">{ROLE_LABELS[member.role] ?? member.role}</Badge>
-            </div>
-          ))}
         </CardContent>
       </Card>
     </div>

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Archive, Home, Plus, Settings, Star } from 'lucide-react'
+import { Archive, Home, Plus, Settings, Star, Tags } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -48,6 +48,10 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
         <NavLink to="/app/archive" className={navLinkClass} onClick={onNavigate}>
           <Archive className="h-4 w-4" />
           {t.nav.archive}
+        </NavLink>
+        <NavLink to="/app/tags" className={navLinkClass} onClick={onNavigate}>
+          <Tags className="h-4 w-4" />
+          {t.tags.title}
         </NavLink>
       </div>
 

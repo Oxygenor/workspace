@@ -28,6 +28,7 @@ import {
   useDeleteItem,
   useDuplicateItem,
   useRenameItem,
+  useUpdateItemColor,
   useUpdateItemIcon,
 } from '../hooks'
 import { CreateItemMenu } from './CreateItemMenu'
@@ -54,6 +55,7 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
   const createItem = useCreateItem()
   const renameItem = useRenameItem()
   const updateIcon = useUpdateItemIcon()
+  const updateColor = useUpdateItemColor()
   const duplicateItem = useDuplicateItem()
   const archiveItem = useArchiveItem()
   const deleteItem = useDeleteItem()
@@ -61,6 +63,8 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [draftName, setDraftName] = useState(item.name)
   const [confirmOpen, setConfirmOpen] = useState<'archive' | 'delete' | null>(null)
+  const [createMenuOpen, setCreateMenuOpen] = useState(false)
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const isSection = item.type === 'section'
@@ -155,9 +159,14 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
           <GripVertical className="h-3.5 w-3.5" />
         </button>
 
-        <IconPicker value={item.icon ?? ''} onChange={(icon) => updateIcon.mutate({ itemId: item.id, icon })}>
-          <button type="button" className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground">
-            <Icon className="h-4 w-4" />
+        <IconPicker
+          value={item.icon ?? ''}
+          onChange={(icon) => updateIcon.mutate({ itemId: item.id, icon })}
+          color={item.color}
+          onColorChange={(color) => updateColor.mutate({ itemId: item.id, color })}
+        >
+          <button type="button" className="flex h-5 w-5 shrink-0 items-center justify-center">
+            <Icon className="h-4 w-4" style={{ color: item.color }} />
           </button>
         </IconPicker>
 
@@ -187,16 +196,21 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
           </button>
         )}
 
-        <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
+        <div
+          className={cn(
+            'hidden shrink-0 items-center gap-0.5 group-hover:flex',
+            (createMenuOpen || actionsMenuOpen) && 'flex',
+          )}
+        >
           {isSection && (
-            <CreateItemMenu onSelect={handleCreateChild}>
+            <CreateItemMenu onSelect={handleCreateChild} onOpenChange={setCreateMenuOpen}>
               <Button variant="ghost" size="icon" className="h-6 w-6" title={t.create.title}>
                 <Plus className="h-3.5 w-3.5" />
               </Button>
             </CreateItemMenu>
           )}
 
-          <DropdownMenu>
+          <DropdownMenu open={actionsMenuOpen} onOpenChange={setActionsMenuOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-6 w-6">
                 <MoreHorizontal className="h-3.5 w-3.5" />

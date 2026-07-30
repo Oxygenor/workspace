@@ -10,6 +10,7 @@ function makeItem(overrides: Partial<WorkspaceItemRow> & { id: string }): Worksp
     type: 'section',
     name: overrides.id,
     icon: null,
+    color: '#a855f7',
     position: 1000,
     settings: {},
     created_by: 'user-1',

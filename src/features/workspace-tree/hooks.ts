@@ -16,6 +16,7 @@ import {
   moveWorkspaceItem,
   renameWorkspaceItem,
   restoreWorkspaceItem,
+  updateItemColor,
   updateItemIcon,
   updateItemSettings,
 } from './api'
@@ -85,6 +86,19 @@ export function useUpdateItemIcon() {
 
   return useMutation({
     mutationFn: ({ itemId, icon }: { itemId: string; icon: string }) => updateItemIcon(itemId, icon),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workspaceItems(workspace?.id) })
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+export function useUpdateItemColor() {
+  const { workspace } = useCurrentWorkspace()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ itemId, color }: { itemId: string; color: string }) => updateItemColor(itemId, color),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaceItems(workspace?.id) })
     },

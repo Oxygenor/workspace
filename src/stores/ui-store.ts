@@ -19,12 +19,7 @@ interface UiState {
 
   activeWorkspaceId: string | null
   setActiveWorkspaceId: (workspaceId: string | null) => void
-
-  recentItemIds: string[]
-  pushRecentItem: (itemId: string) => void
 }
-
-const MAX_RECENT_ITEMS = 8
 
 export const useUiStore = create<UiState>()(
   persist(
@@ -49,19 +44,12 @@ export const useUiStore = create<UiState>()(
 
       activeWorkspaceId: null,
       setActiveWorkspaceId: (workspaceId) => set({ activeWorkspaceId: workspaceId }),
-
-      recentItemIds: [],
-      pushRecentItem: (itemId) =>
-        set((state) => ({
-          recentItemIds: [itemId, ...state.recentItemIds.filter((id) => id !== itemId)].slice(0, MAX_RECENT_ITEMS),
-        })),
     }),
     {
       name: 'workspace-ui',
       partialize: (state) => ({
         expandedItemIds: state.expandedItemIds,
         activeWorkspaceId: state.activeWorkspaceId,
-        recentItemIds: state.recentItemIds,
       }),
     },
   ),

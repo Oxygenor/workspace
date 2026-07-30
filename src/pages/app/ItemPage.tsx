@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { MoreHorizontal, Star } from 'lucide-react'
 
@@ -19,17 +19,18 @@ import { t } from '@/i18n'
 import { Breadcrumbs } from '@/features/workspace-tree/components/Breadcrumbs'
 import { IconPicker } from '@/features/workspace-tree/components/IconPicker'
 import { SectionContentsView } from '@/features/workspace-tree/components/SectionContentsView'
+import { TagPicker } from '@/features/tags/components/TagPicker'
 import {
   useArchiveItem,
   useDeleteItem,
   useDuplicateItem,
   useRenameItem,
+  useUpdateItemColor,
   useUpdateItemIcon,
   useWorkspaceItems,
 } from '@/features/workspace-tree/hooks'
 import { nextAppendPosition } from '@/features/workspace-tree/tree-utils'
 import { useFavorites, useToggleFavorite } from '@/features/favorites/hooks'
-import { useUiStore } from '@/stores/ui-store'
 import NotFoundPage from '@/pages/NotFoundPage'
 
 export default function ItemPage() {
@@ -40,18 +41,14 @@ export default function ItemPage() {
   const toggleFavorite = useToggleFavorite()
   const renameItem = useRenameItem()
   const updateIcon = useUpdateItemIcon()
+  const updateColor = useUpdateItemColor()
   const duplicateItem = useDuplicateItem()
   const archiveItem = useArchiveItem()
   const deleteItem = useDeleteItem()
-  const pushRecentItem = useUiStore((s) => s.pushRecentItem)
 
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [draftName, setDraftName] = useState('')
   const [confirmOpen, setConfirmOpen] = useState<'archive' | 'delete' | null>(null)
-
-  useEffect(() => {
-    if (itemId) pushRecentItem(itemId)
-  }, [itemId, pushRecentItem])
 
   if (isLoading) {
     return (
@@ -92,12 +89,18 @@ export default function ItemPage() {
       <Breadcrumbs itemId={item.id} />
 
       <div className="flex items-center gap-3">
-        <IconPicker value={item.icon ?? ''} onChange={(icon) => updateIcon.mutate({ itemId: item.id, icon })}>
+        <IconPicker
+          value={item.icon ?? ''}
+          onChange={(icon) => updateIcon.mutate({ itemId: item.id, icon })}
+          color={item.color}
+          onColorChange={(color) => updateColor.mutate({ itemId: item.id, color })}
+        >
           <button
             type="button"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+            style={{ backgroundColor: `${item.color}22` }}
           >
-            <Icon className="h-5 w-5" />
+            <Icon className="h-5 w-5" style={{ color: item.color }} />
           </button>
         </IconPicker>
 
@@ -162,6 +165,8 @@ export default function ItemPage() {
           </DropdownMenu>
         </div>
       </div>
+
+      <TagPicker itemId={item.id} />
 
       {item.type === 'section' ? (
         <SectionContentsView section={item} items={children} />

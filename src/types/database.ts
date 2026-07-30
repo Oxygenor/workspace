@@ -35,6 +35,7 @@ export interface WorkspaceItemRow extends Timestamped {
   type: ItemType
   name: string
   icon: string | null
+  color: string
   position: number
   settings: Record<string, unknown>
   created_by: string | null
@@ -71,12 +72,6 @@ export interface KanbanCardRow extends Timestamped {
   position: number
   created_by: string | null
   archived_at: string | null
-}
-
-export interface CardAssigneeRow {
-  card_id: string
-  user_id: string
-  created_at: string
 }
 
 export interface LabelRow {
@@ -186,5 +181,33 @@ export interface ActivityLogRow {
   entity_id: string | null
   action: string
   metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface TagRow {
+  id: string
+  workspace_id: string
+  name: string
+  color: string
+  created_at: string
+}
+
+export interface TagLinkRow {
+  id: string
+  tag_id: string
+  item_id: string | null
+  card_id: string | null
+  task_id: string | null
+  created_at: string
+}
+
+export interface TimeEntryRow {
+  id: string
+  workspace_id: string
+  user_id: string
+  card_id: string | null
+  task_id: string | null
+  started_at: string
+  ended_at: string | null
   created_at: string
 }

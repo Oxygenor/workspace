@@ -18,7 +18,6 @@ function makeCard(overrides: Partial<KanbanCardSummary> & { id: string }): Kanba
     archived_at: null,
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z',
-    assigneeIds: [],
     labelIds: [],
     checklistTotal: 0,
     checklistCompleted: 0,
@@ -30,19 +29,14 @@ function makeCard(overrides: Partial<KanbanCardSummary> & { id: string }): Kanba
 
 describe('applyCardFilters', () => {
   const cards = [
-    makeCard({ id: '1', title: 'Виправити баг у логіні', assigneeIds: ['u1'], priority: 'high' }),
-    makeCard({ id: '2', title: 'Оновити дизайн', assigneeIds: ['u2'], priority: 'low' }),
+    makeCard({ id: '1', title: 'Виправити баг у логіні', priority: 'high' }),
+    makeCard({ id: '2', title: 'Оновити дизайн', priority: 'low' }),
     makeCard({ id: '3', title: 'Написати тести', due_date: '2020-01-01T00:00:00.000Z' }),
   ]
 
   it('filters by free-text search across title', () => {
     const result = applyCardFilters(cards, EMPTY_FILTERS, 'дизайн')
     expect(result.map((c) => c.id)).toEqual(['2'])
-  })
-
-  it('filters by assignee', () => {
-    const result = applyCardFilters(cards, { ...EMPTY_FILTERS, assigneeId: 'u1' }, '')
-    expect(result.map((c) => c.id)).toEqual(['1'])
   })
 
   it('filters by priority', () => {

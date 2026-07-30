@@ -86,6 +86,11 @@ export async function updateItemIcon(itemId: string, icon: string): Promise<Work
   return throwIfError(result, 'Не вдалося змінити іконку.')
 }
 
+export async function updateItemColor(itemId: string, color: string): Promise<WorkspaceItemRow> {
+  const result = await supabase.from('workspace_items').update({ color }).eq('id', itemId).select('*').single()
+  return throwIfError(result, 'Не вдалося змінити колір.')
+}
+
 export async function archiveWorkspaceItem(itemId: string): Promise<WorkspaceItemRow> {
   const result = await supabase
     .from('workspace_items')

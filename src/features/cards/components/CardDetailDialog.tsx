@@ -26,9 +26,10 @@ import { t } from '@/i18n'
 import { useColumns } from '@/features/kanban/hooks'
 import { PRIORITY_LABELS, PRIORITY_ORDER } from '@/features/kanban/priority'
 import { useCurrentWorkspace, useWorkspaceMembers } from '@/features/workspace/hooks'
+import { TagPicker } from '@/features/tags/components/TagPicker'
+import { TimeTrackingSection } from '@/features/time/components/TimeTrackingSection'
 import type { PriorityLevel } from '@/types/database'
 import { useCard, useUpdateCard } from '../hooks'
-import { AssigneesPicker } from './AssigneesPicker'
 import { AttachmentsSection } from './AttachmentsSection'
 import { ChecklistSection } from './ChecklistSection'
 import { CommentsSection } from './CommentsSection'
@@ -170,13 +171,13 @@ export function CardDetailDialog({ cardId, boardId, open, onOpenChange }: CardDe
               </div>
 
               <div className="space-y-1.5">
-                <Label>{t.card.assignees}</Label>
-                <AssigneesPicker cardId={cardId} boardId={boardId} />
+                <Label>{t.card.labels}</Label>
+                <LabelsPicker cardId={cardId} boardId={boardId} />
               </div>
 
               <div className="space-y-1.5">
-                <Label>{t.card.labels}</Label>
-                <LabelsPicker cardId={cardId} boardId={boardId} />
+                <Label>{t.tags.title}</Label>
+                <TagPicker cardId={cardId} />
               </div>
 
               <div className="space-y-1.5">
@@ -202,6 +203,10 @@ export function CardDetailDialog({ cardId, boardId, open, onOpenChange }: CardDe
               <Separator />
 
               <AttachmentsSection cardId={cardId} boardId={boardId} />
+
+              <Separator />
+
+              <TimeTrackingSection cardId={cardId} />
 
               <Separator />
 

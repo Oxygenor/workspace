@@ -18,7 +18,6 @@ export function applyCardFilters(
       if (!matches) return false
     }
 
-    if (filters.assigneeId && !card.assigneeIds.includes(filters.assigneeId)) return false
     if (filters.priority && card.priority !== filters.priority) return false
     if (filters.labelId && !card.labelIds.includes(filters.labelId)) return false
 

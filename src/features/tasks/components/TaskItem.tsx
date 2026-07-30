@@ -1,20 +1,47 @@
 import { useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Clock, Plus, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_ORDER } from '@/features/kanban/priority'
+import { TagPicker } from '@/features/tags/components/TagPicker'
+import { TimeTrackingSection } from '@/features/time/components/TimeTrackingSection'
+import { formatDuration, useRunningTimer, useTotalSecondsForTarget } from '@/features/time/hooks'
 import { cn } from '@/lib/utils'
 import { nextAppendPosition } from '@/lib/position'
 import { t } from '@/i18n'
 import type { PriorityLevel, TaskRow } from '@/types/database'
 import { useCreateTask, useDeleteTask, useUpdateTask } from '../hooks'
 import { AddTaskInput } from './AddTaskInput'
-import { TaskAssigneePicker } from './TaskAssigneePicker'
 import { TaskLabels } from './TaskLabels'
+
+function TaskTimeButton({ taskId }: { taskId: string }) {
+  const { data: runningEntry } = useRunningTimer()
+  const { data: totalSeconds } = useTotalSecondsForTarget({ taskId })
+  const isRunning = runningEntry?.task_id === taskId
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn('h-6 shrink-0 gap-1 px-1.5 text-xs', isRunning && 'text-primary')}
+        >
+          <Clock className={cn('h-3.5 w-3.5', isRunning && 'animate-pulse')} />
+          {formatDuration(totalSeconds ?? 0)}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80" align="start">
+        <TimeTrackingSection taskId={taskId} />
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 interface TaskItemProps {
   task: TaskRow
@@ -120,9 +147,11 @@ export function TaskItem({ task, taskListId, subtasks = [] }: TaskItemProps) {
           className="h-7 shrink-0 rounded-md border border-input bg-transparent px-1.5 text-xs text-muted-foreground shadow-sm"
         />
 
-        <TaskAssigneePicker task={task} taskListId={taskListId} />
-
         <TaskLabels task={task} taskListId={taskListId} />
+
+        <TagPicker taskId={task.id} />
+
+        <TaskTimeButton taskId={task.id} />
 
         {!isSubtask && (
           <Button

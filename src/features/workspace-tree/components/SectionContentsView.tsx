@@ -60,8 +60,11 @@ export function SectionContentsView({ section, items }: SectionContentsViewProps
             className="flex cursor-pointer flex-row items-center gap-3 p-4 transition-shadow hover:shadow-md"
             onClick={() => navigate(`/app/item/${item.id}`)}
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-              <Icon className="h-5 w-5" />
+            <span
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+              style={{ backgroundColor: `${item.color}22` }}
+            >
+              <Icon className="h-5 w-5" style={{ color: item.color }} />
             </span>
             <span className="truncate text-sm font-medium text-foreground">{item.name}</span>
           </Card>

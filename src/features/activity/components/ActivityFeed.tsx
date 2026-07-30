@@ -47,8 +47,12 @@ function describe(entry: ActivityWithActor): string {
   }
 }
 
-export function ActivityFeed() {
-  const { data: activity, isLoading } = useRecentActivity()
+interface ActivityFeedProps {
+  limit?: number
+}
+
+export function ActivityFeed({ limit = 5 }: ActivityFeedProps) {
+  const { data: activity, isLoading } = useRecentActivity(limit)
 
   if (isLoading) {
     return (

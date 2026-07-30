@@ -16,7 +16,6 @@ export const queryKeys = {
   cardChecklist: (cardId: string | undefined) => ['card-checklist', cardId] as const,
   cardComments: (cardId: string | undefined) => ['card-comments', cardId] as const,
   cardAttachments: (cardId: string | undefined) => ['card-attachments', cardId] as const,
-  cardAssignees: (cardId: string | undefined) => ['card-assignees', cardId] as const,
   cardLabels: (cardId: string | undefined) => ['card-labels', cardId] as const,
   boardLabels: (boardId: string | undefined) => ['board-labels', boardId] as const,
 
@@ -35,4 +34,14 @@ export const queryKeys = {
   activityLog: (workspaceId: string | undefined) => ['activity-log', workspaceId] as const,
 
   search: (workspaceId: string | undefined, query: string) => ['search', workspaceId, query] as const,
+
+  tags: (workspaceId: string | undefined) => ['tags', workspaceId] as const,
+  tagLinks: (targetId: string | undefined) => ['tag-links', targetId] as const,
+  tagDetail: (tagId: string | undefined) => ['tag-detail', tagId] as const,
+
+  runningTimer: (userId: string | undefined) => ['running-timer', userId] as const,
+  timeEntries: (cardId: string | undefined, taskId: string | undefined) =>
+    ['time-entries', cardId ?? null, taskId ?? null] as const,
+  timeEntriesTotal: (cardId: string | undefined, taskId: string | undefined) =>
+    ['time-entries-total', cardId ?? null, taskId ?? null] as const,
 }

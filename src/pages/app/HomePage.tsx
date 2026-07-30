@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, CalendarClock, Clock, FolderKanban, Plus, Star, UserCheck } from 'lucide-react'
+import { AlertTriangle, CalendarClock, CalendarDays, FolderKanban, Plus, Star } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { resolveIcon } from '@/lib/modules/icon-map'
 import { t } from '@/i18n'
@@ -12,8 +13,8 @@ import { useFavorites } from '@/features/favorites/hooks'
 import { useCreateItem, useWorkspaceItems } from '@/features/workspace-tree/hooks'
 import { CreateItemMenu } from '@/features/workspace-tree/components/CreateItemMenu'
 import { nextAppendPosition } from '@/features/workspace-tree/tree-utils'
-import { useMyAssignedItems, useOverdueDeadlines, useUpcomingDeadlines } from '@/features/home/hooks'
-import { ActivityFeed } from '@/features/activity/components/ActivityFeed'
+import { useMyDay, useToggleTaskCompleted, useUpcomingDeadlines } from '@/features/home/hooks'
+import type { DeadlineEntry } from '@/features/home/api'
 import { useUiStore } from '@/stores/ui-store'
 import { Button } from '@/components/ui/button'
 
@@ -24,15 +25,18 @@ function greeting() {
   return t.home.greetingEvening
 }
 
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('uk-UA')
+}
+
 export default function HomePage() {
   const { data: profile, isLoading: profileLoading } = useProfile()
   const { user } = useAuth()
   const { data: items, isLoading: itemsLoading } = useWorkspaceItems()
   const { data: favorites } = useFavorites()
-  const { data: assignedItems, isLoading: assignedLoading } = useMyAssignedItems()
+  const { data: myDay, isLoading: myDayLoading } = useMyDay()
   const { data: upcomingDeadlines, isLoading: upcomingLoading } = useUpcomingDeadlines()
-  const { data: overdueDeadlines, isLoading: overdueLoading } = useOverdueDeadlines()
-  const recentItemIds = useUiStore((s) => s.recentItemIds)
+  const toggleTaskCompleted = useToggleTaskCompleted()
   const navigate = useNavigate()
   const createItem = useCreateItem()
   const setPendingRenameItemId = useUiStore((s) => s.setPendingRenameItemId)
@@ -40,17 +44,14 @@ export default function HomePage() {
   const displayName = profile?.full_name || user?.email?.split('@')[0] || ''
   const isLoading = profileLoading || itemsLoading
 
-  const recentItems = recentItemIds
-    .map((id) => items?.find((i) => i.id === id))
-    .filter((item): item is NonNullable<typeof item> => Boolean(item))
-    .slice(0, 5)
-
   const favoriteItems = (favorites ?? [])
     .map((f) => items?.find((i) => i.id === f.item_id))
     .filter((item): item is NonNullable<typeof item> => Boolean(item))
     .slice(0, 5)
 
   const activeProjectsCount = (items ?? []).filter((i) => i.type === 'kanban').length
+  const overdue = myDay?.overdue ?? []
+  const today = myDay?.today ?? []
 
   function handleQuickCreate(type: Parameters<typeof createItem.mutate>[0]['type']) {
     const rootSiblings = (items ?? []).filter((i) => i.parent_id === null)
@@ -62,6 +63,32 @@ export default function HomePage() {
           navigate(`/app/item/${created.id}`)
         },
       },
+    )
+  }
+
+  function renderEntry(entry: DeadlineEntry, variant: 'overdue' | 'today') {
+    return (
+      <div key={`${entry.sourceType}-${entry.id}`} className="flex items-center gap-2 rounded-md p-2 hover:bg-accent">
+        {entry.sourceType === 'task' ? (
+          <Checkbox
+            checked={entry.completed ?? false}
+            onCheckedChange={(checked) =>
+              toggleTaskCompleted.mutate({ taskId: entry.id, completed: checked === true, taskListId: entry.targetItemId })
+            }
+          />
+        ) : (
+          <FolderKanban className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        )}
+        <button
+          onClick={() => navigate(`/app/item/${entry.targetItemId}`)}
+          className="flex-1 truncate text-left text-sm"
+        >
+          {entry.title}
+        </button>
+        {entry.due_date && (
+          <Badge variant={variant === 'overdue' ? 'destructive' : 'secondary'}>{formatDate(entry.due_date)}</Badge>
+        )}
+      </div>
     )
   }
 
@@ -97,11 +124,11 @@ export default function HomePage() {
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-              <UserCheck className="h-5 w-5" />
+              <CalendarDays className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-2xl font-semibold text-foreground">{assignedLoading ? '—' : assignedItems?.length ?? 0}</p>
-              <p className="text-xs text-muted-foreground">{t.home.assignedToMe}</p>
+              <p className="text-2xl font-semibold text-foreground">{myDayLoading ? '—' : today.length}</p>
+              <p className="text-xs text-muted-foreground">{t.home.todaySection}</p>
             </div>
           </CardContent>
         </Card>
@@ -111,42 +138,41 @@ export default function HomePage() {
               <AlertTriangle className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-2xl font-semibold text-foreground">{overdueLoading ? '—' : overdueDeadlines?.length ?? 0}</p>
+              <p className="text-2xl font-semibold text-foreground">{myDayLoading ? '—' : overdue.length}</p>
               <p className="text-xs text-muted-foreground">{t.home.overdueTasks}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Clock className="h-4 w-4" />
-              {t.home.recentlyOpened}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            {isLoading && <Skeleton className="h-10 w-full" />}
-            {!isLoading && recentItems.length === 0 && (
-              <p className="text-sm text-muted-foreground">{t.home.noData}</p>
-            )}
-            {recentItems.map((item) => {
-              const Icon = resolveIcon(item.icon, item.type)
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => navigate(`/app/item/${item.id}`)}
-                  className="flex w-full items-center gap-2 rounded-md p-2 text-left text-sm hover:bg-accent"
-                >
-                  <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate">{item.name}</span>
-                </button>
-              )
-            })}
-          </CardContent>
-        </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CalendarDays className="h-4 w-4" />
+            {t.home.myDay}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {myDayLoading && <Skeleton className="h-10 w-full" />}
+          {!myDayLoading && overdue.length === 0 && today.length === 0 && (
+            <p className="text-sm text-muted-foreground">{t.home.myDayEmpty}</p>
+          )}
+          {overdue.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-destructive">{t.home.overdueSection}</p>
+              {overdue.map((entry) => renderEntry(entry, 'overdue'))}
+            </div>
+          )}
+          {today.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t.home.todaySection}</p>
+              {today.map((entry) => renderEntry(entry, 'today'))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -178,35 +204,6 @@ export default function HomePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <UserCheck className="h-4 w-4" />
-              {t.home.assignedToMe}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            {assignedLoading && <Skeleton className="h-10 w-full" />}
-            {!assignedLoading && (assignedItems?.length ?? 0) === 0 && (
-              <p className="text-sm text-muted-foreground">{t.home.noData}</p>
-            )}
-            {assignedItems?.slice(0, 5).map((entry) => (
-              <button
-                key={`${entry.sourceType}-${entry.id}`}
-                onClick={() => navigate(`/app/item/${entry.targetItemId}`)}
-                className="flex w-full items-center justify-between gap-2 rounded-md p-2 text-left text-sm hover:bg-accent"
-              >
-                <span className="truncate">{entry.title}</span>
-                {entry.due_date && (
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {new Date(entry.due_date).toLocaleDateString('uk-UA')}
-                  </span>
-                )}
-              </button>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
               <CalendarClock className="h-4 w-4" />
               {t.home.upcomingDeadlines}
             </CardTitle>
@@ -223,43 +220,9 @@ export default function HomePage() {
                 className="flex w-full items-center justify-between gap-2 rounded-md p-2 text-left text-sm hover:bg-accent"
               >
                 <span className="truncate">{entry.title}</span>
-                <Badge variant="secondary">{new Date(entry.due_date!).toLocaleDateString('uk-UA')}</Badge>
+                <Badge variant="secondary">{formatDate(entry.due_date!)}</Badge>
               </button>
             ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base text-destructive">
-              <AlertTriangle className="h-4 w-4" />
-              {t.home.overdueTasks}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            {overdueLoading && <Skeleton className="h-10 w-full" />}
-            {!overdueLoading && (overdueDeadlines?.length ?? 0) === 0 && (
-              <p className="text-sm text-muted-foreground">{t.home.noData}</p>
-            )}
-            {overdueDeadlines?.slice(0, 5).map((entry) => (
-              <button
-                key={`${entry.sourceType}-${entry.id}`}
-                onClick={() => navigate(`/app/item/${entry.targetItemId}`)}
-                className="flex w-full items-center justify-between gap-2 rounded-md p-2 text-left text-sm hover:bg-accent"
-              >
-                <span className="truncate">{entry.title}</span>
-                <Badge variant="destructive">{new Date(entry.due_date!).toLocaleDateString('uk-UA')}</Badge>
-              </button>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t.home.recentActivity}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ActivityFeed />
           </CardContent>
         </Card>
       </div>

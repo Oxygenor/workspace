@@ -14,6 +14,7 @@ import ItemPage from '@/pages/app/ItemPage'
 import SearchPage from '@/pages/app/SearchPage'
 import FavoritesPage from '@/pages/app/FavoritesPage'
 import ArchivePage from '@/pages/app/ArchivePage'
+import TagsPage from '@/features/tags/pages/TagsPage'
 import ProfilePage from '@/pages/app/settings/ProfilePage'
 import WorkspaceSettingsPage from '@/pages/app/settings/WorkspaceSettingsPage'
 import NotFoundPage from '@/pages/NotFoundPage'
@@ -49,6 +50,7 @@ export const router = createBrowserRouter([
           { path: 'search', element: <SearchPage /> },
           { path: 'favorites', element: <FavoritesPage /> },
           { path: 'archive', element: <ArchivePage /> },
+          { path: 'tags', element: <TagsPage /> },
           { path: 'settings/profile', element: <ProfilePage /> },
           { path: 'settings/workspace', element: <WorkspaceSettingsPage /> },
           { path: '*', element: <NotFoundPage /> },

@@ -6,7 +6,6 @@ import { useAuth } from '@/features/auth/use-auth'
 import { useCurrentWorkspace } from '@/features/workspace/hooks'
 import type { PriorityLevel } from '@/types/database'
 import {
-  addCardAssignee,
   addCardLabel,
   createChecklistItem,
   createComment,
@@ -15,11 +14,9 @@ import {
   deleteComment,
   fetchAttachments,
   fetchCard,
-  fetchCardAssignees,
   fetchCardLabelIds,
   fetchChecklistItems,
   fetchComments,
-  removeCardAssignee,
   removeCardLabel,
   updateCard,
   updateChecklistItem,
@@ -42,28 +39,6 @@ export function useUpdateCard(cardId: string, boardId: string) {
   return useMutation({
     mutationFn: (input: UpdateCardInput) => updateCard(cardId, input),
     onSuccess: () => invalidateCard(queryClient, cardId, boardId),
-    onError: (error: Error) => toast.error(error.message),
-  })
-}
-
-export function useCardAssignees(cardId: string) {
-  return useQuery({ queryKey: queryKeys.cardAssignees(cardId), queryFn: () => fetchCardAssignees(cardId) })
-}
-
-export function useToggleAssignee(cardId: string, boardId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ userId, isAssigned }: { userId: string; isAssigned: boolean }) => {
-      if (isAssigned) {
-        await removeCardAssignee(cardId, userId)
-      } else {
-        await addCardAssignee(cardId, userId)
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.cardAssignees(cardId) })
-      invalidateCard(queryClient, cardId, boardId)
-    },
     onError: (error: Error) => toast.error(error.message),
   })
 }
