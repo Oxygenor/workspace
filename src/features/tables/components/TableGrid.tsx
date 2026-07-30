@@ -197,7 +197,7 @@ export function TableGrid({ tableId }: TableGridProps) {
                   <TableColumnHeader key={column.id} column={column} tableId={tableId} />
                 ))}
               </SortableContext>
-              <th className="border-b border-border p-1.5 align-middle">
+              <th className={cn('border-b border-border align-middle', orderedColumns.length === 0 ? 'p-1.5' : 'w-9 p-0.5')}>
                 {isAddingColumn ? (
                   <Input
                     autoFocus
@@ -214,14 +214,26 @@ export function TableGrid({ tableId }: TableGridProps) {
                 ) : (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="whitespace-nowrap font-normal text-muted-foreground hover:text-foreground"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        {t.table.addColumn}
-                      </Button>
+                      {orderedColumns.length === 0 ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="whitespace-nowrap font-normal text-muted-foreground hover:text-foreground"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          {t.table.addColumn}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="mx-auto flex h-7 w-7 text-muted-foreground hover:text-foreground"
+                          title={t.table.addColumn}
+                          aria-label={t.table.addColumn}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
                       {FIELD_TYPES.map((fieldType) => (
