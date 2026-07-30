@@ -161,7 +161,7 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
           type="button"
           {...attributes}
           {...listeners}
-          className="flex h-5 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100"
+          className="hidden h-5 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground group-hover:flex"
           aria-label="Перетягнути"
         >
           <GripVertical className="h-3.5 w-3.5" />
