@@ -1,0 +1,7 @@
+-- Demo data is created automatically for every new user by the
+-- public.handle_new_user() trigger defined in
+-- 0003_functions_and_triggers.sql (personal workspace + demo section
+-- tree + demo kanban board with 5 columns). No manual seeding is
+-- required for local development — just sign up a user via Supabase
+-- Auth (`supabase start` + the app's /register page, or the Supabase
+-- Studio Auth panel) and the demo structure will appear.
