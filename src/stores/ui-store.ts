@@ -7,6 +7,10 @@ interface UiState {
   setSidebarOpen: (open: boolean) => void
   toggleSidebar: () => void
 
+  /** Desktop-only: collapses the sidebar to reclaim screen width. Persisted as a user preference. */
+  sidebarCollapsed: boolean
+  toggleSidebarCollapsed: () => void
+
   expandedItemIds: Record<string, boolean>
   toggleExpanded: (itemId: string) => void
   setExpanded: (itemId: string, expanded: boolean) => void
@@ -27,6 +31,9 @@ export const useUiStore = create<UiState>()(
       sidebarOpen: false,
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       toggleSidebar: () => set({ sidebarOpen: !get().sidebarOpen }),
+
+      sidebarCollapsed: false,
+      toggleSidebarCollapsed: () => set({ sidebarCollapsed: !get().sidebarCollapsed }),
 
       expandedItemIds: {},
       toggleExpanded: (itemId) =>
@@ -50,6 +57,7 @@ export const useUiStore = create<UiState>()(
       partialize: (state) => ({
         expandedItemIds: state.expandedItemIds,
         activeWorkspaceId: state.activeWorkspaceId,
+        sidebarCollapsed: state.sidebarCollapsed,
       }),
     },
   ),
