@@ -18,6 +18,7 @@ export interface UpdateCardInput {
   title?: string
   description?: string | null
   priority?: PriorityLevel
+  color?: string | null
   start_date?: string | null
   due_date?: string | null
   column_id?: string

@@ -22,7 +22,8 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { useDebouncedCallback } from '@/hooks/use-debounced-callback'
-import { openDatePicker } from '@/lib/utils'
+import { cn, openDatePicker } from '@/lib/utils'
+import { COLUMN_COLORS } from '@/lib/validations/kanban'
 import { t } from '@/i18n'
 import { useColumns } from '@/features/kanban/hooks'
 import { PRIORITY_LABELS, PRIORITY_ORDER } from '@/features/kanban/priority'
@@ -170,6 +171,37 @@ export function CardDetailDialog({ cardId, boardId, open, onOpenChange }: CardDe
                       updateCard.mutate({ due_date: e.target.value ? new Date(e.target.value).toISOString() : null })
                     }
                   />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>{t.card.color}</Label>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => updateCard.mutate({ color: null })}
+                    className={cn(
+                      'flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-[10px] text-muted-foreground transition-transform hover:scale-110',
+                      !card.color && 'ring-2 ring-ring',
+                    )}
+                    aria-label={t.common.none}
+                    title={t.common.none}
+                  >
+                    ×
+                  </button>
+                  {COLUMN_COLORS.map((swatch) => (
+                    <button
+                      key={swatch}
+                      type="button"
+                      onClick={() => updateCard.mutate({ color: swatch })}
+                      className={cn(
+                        'h-6 w-6 rounded-full ring-offset-2 ring-offset-background transition-transform hover:scale-110',
+                        card.color === swatch && 'ring-2 ring-ring',
+                      )}
+                      style={{ backgroundColor: swatch }}
+                      aria-label={swatch}
+                    />
+                  ))}
                 </div>
               </div>
 

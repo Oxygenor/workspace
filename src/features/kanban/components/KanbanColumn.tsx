@@ -9,10 +9,13 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { cn } from '@/lib/utils'
 import { t } from '@/i18n'
@@ -104,9 +107,12 @@ export function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform) }}
+      style={{
+        transform: CSS.Translate.toString(transform),
+        borderTopColor: column.color,
+      }}
       className={cn(
-        'flex h-full w-72 shrink-0 flex-col rounded-xl border border-border bg-muted/40',
+        'flex h-full w-72 shrink-0 flex-col rounded-xl border border-t-4 border-border bg-muted/40',
         isDragging && 'opacity-40',
       )}
     >
@@ -155,37 +161,38 @@ export function KanbanColumn({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={() => setIsEditingName(true)}>{t.common.rename}</DropdownMenuItem>
-            <Popover>
-              <PopoverTrigger asChild>
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>{t.kanban.columnColor}</DropdownMenuItem>
-              </PopoverTrigger>
-              <PopoverContent className="flex w-auto gap-1" align="start">
-                {COLUMN_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    className="h-6 w-6 rounded-full ring-offset-2 hover:ring-2 hover:ring-ring"
-                    style={{ backgroundColor: color }}
-                    onClick={() => updateColor.mutate({ columnId: column.id, color })}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>{t.kanban.columnColor}</DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent className="flex w-auto gap-1 p-2">
+                  {COLUMN_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      className="h-6 w-6 rounded-full ring-offset-2 hover:ring-2 hover:ring-ring"
+                      style={{ backgroundColor: color }}
+                      onClick={() => updateColor.mutate({ columnId: column.id, color })}
+                    />
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+            <DropdownMenuSub onOpenChange={(open) => !open && commitWipLimit()}>
+              <DropdownMenuSubTrigger>{t.wipLimit.label}</DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent className="w-40 p-2">
+                  <Input
+                    autoFocus
+                    type="number"
+                    min={0}
+                    value={draftWipLimit}
+                    onChange={(e) => setDraftWipLimit(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && commitWipLimit()}
+                    placeholder={t.wipLimit.placeholder}
+                    className="h-8"
                   />
-                ))}
-              </PopoverContent>
-            </Popover>
-            <Popover onOpenChange={(open) => !open && commitWipLimit()}>
-              <PopoverTrigger asChild>
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>{t.wipLimit.label}</DropdownMenuItem>
-              </PopoverTrigger>
-              <PopoverContent className="w-40" align="start">
-                <Input
-                  type="number"
-                  min={0}
-                  value={draftWipLimit}
-                  onChange={(e) => setDraftWipLimit(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && commitWipLimit()}
-                  placeholder={t.wipLimit.placeholder}
-                  className="h-8"
-                />
-              </PopoverContent>
-            </Popover>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => archiveColumn.mutate(column.id)}>
               <Archive />

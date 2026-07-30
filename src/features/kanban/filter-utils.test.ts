@@ -11,6 +11,7 @@ function makeCard(overrides: Partial<KanbanCardSummary> & { id: string }): Kanba
     title: 'Картка',
     description: null,
     priority: 'medium',
+    color: null,
     start_date: null,
     due_date: null,
     position: 1000,

@@ -1,6 +1,6 @@
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { CheckSquare, MessageSquare, Paperclip } from 'lucide-react'
+import { CheckSquare, Clock, MessageSquare, Paperclip } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -52,12 +52,15 @@ export function KanbanCardPreview({
       {...attributes}
       {...listeners}
       onClick={onOpen}
-      style={{ transform: CSS.Translate.toString(transform) }}
+      style={{
+        transform: CSS.Translate.toString(transform),
+        borderLeftColor: card.color ?? undefined,
+      }}
       title={isStale ? t.staleCard.label : undefined}
       className={cn(
         'relative cursor-pointer space-y-2 p-3 text-sm transition-shadow hover:shadow-md',
         isDragging && 'opacity-40',
-        isStale && 'border-l-2 border-l-amber-500',
+        card.color ? 'border-l-[3px]' : isStale && 'border-l-2 border-l-amber-500',
       )}
     >
       {selectMode && (
@@ -82,6 +85,7 @@ export function KanbanCardPreview({
 
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span>#{card.card_number}</span>
+        {isStale && card.color && <Clock className="h-3 w-3 text-amber-500" />}
         <Badge variant="secondary" className={cn('px-1.5 py-0 text-[10px]', PRIORITY_CLASSES[card.priority])}>
           {PRIORITY_LABELS[card.priority]}
         </Badge>

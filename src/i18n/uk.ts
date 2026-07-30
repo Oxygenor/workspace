@@ -151,6 +151,7 @@ export const uk = {
     description: 'Опис',
     column: 'Колонка',
     priority: 'Пріоритет',
+    color: 'Колір',
     startDate: 'Дата початку',
     dueDate: 'Дедлайн',
     assignees: 'Виконавці',

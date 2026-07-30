@@ -16,7 +16,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { cn } from '@/lib/utils'
 import { t } from '@/i18n'
@@ -148,14 +147,14 @@ export function TableColumnHeader({ column, tableId }: TableColumnHeaderProps) {
               </DropdownMenuPortal>
             </DropdownMenuSub>
             {hasOptions && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>{t.table.manageOptions}</DropdownMenuItem>
-                </PopoverTrigger>
-                <PopoverContent align="start">
-                  <ColumnOptionsEditor tableId={tableId} column={column} />
-                </PopoverContent>
-              </Popover>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>{t.table.manageOptions}</DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="p-2">
+                    <ColumnOptionsEditor tableId={tableId} column={column} />
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
