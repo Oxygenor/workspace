@@ -122,7 +122,7 @@ export default function ItemPage() {
           />
         ) : (
           <h1
-            className="cursor-text truncate text-xl font-semibold text-foreground"
+            className="cursor-text break-words text-xl font-semibold text-foreground"
             onClick={startEditing}
           >
             {item.name}

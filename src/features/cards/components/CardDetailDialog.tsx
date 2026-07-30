@@ -22,6 +22,7 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { useDebouncedCallback } from '@/hooks/use-debounced-callback'
+import { openDatePicker } from '@/lib/utils'
 import { t } from '@/i18n'
 import { useColumns } from '@/features/kanban/hooks'
 import { PRIORITY_LABELS, PRIORITY_ORDER } from '@/features/kanban/priority'
@@ -152,6 +153,7 @@ export function CardDetailDialog({ cardId, boardId, open, onOpenChange }: CardDe
                   <Input
                     type="date"
                     value={toDateInputValue(card.start_date)}
+                    onClick={openDatePicker}
                     onChange={(e) =>
                       updateCard.mutate({ start_date: e.target.value ? new Date(e.target.value).toISOString() : null })
                     }
@@ -163,6 +165,7 @@ export function CardDetailDialog({ cardId, boardId, open, onOpenChange }: CardDe
                   <Input
                     type="date"
                     value={toDateInputValue(card.due_date)}
+                    onClick={openDatePicker}
                     onChange={(e) =>
                       updateCard.mutate({ due_date: e.target.value ? new Date(e.target.value).toISOString() : null })
                     }

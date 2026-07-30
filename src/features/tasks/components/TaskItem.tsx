@@ -11,7 +11,7 @@ import { PRIORITY_CLASSES, PRIORITY_LABELS, PRIORITY_ORDER } from '@/features/ka
 import { TagPicker } from '@/features/tags/components/TagPicker'
 import { TimeTrackingSection } from '@/features/time/components/TimeTrackingSection'
 import { formatDuration, useRunningTimer, useTotalSecondsForTarget } from '@/features/time/hooks'
-import { cn } from '@/lib/utils'
+import { cn, openDatePicker } from '@/lib/utils'
 import { nextAppendPosition } from '@/lib/position'
 import { t } from '@/i18n'
 import type { PriorityLevel, TaskRow } from '@/types/database'
@@ -156,6 +156,7 @@ export function TaskItem({
         <input
           type="date"
           value={task.due_date?.slice(0, 10) ?? ''}
+          onClick={openDatePicker}
           onChange={(e) =>
             updateTask.mutate({ taskId: task.id, input: { due_date: e.target.value ? e.target.value : null } })
           }

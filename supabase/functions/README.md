@@ -101,11 +101,12 @@ key, which don't belong in source control:
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
--- Runs every day at 07:00 UTC. Adjust the cron expression to taste
--- (pg_cron uses standard 5-field cron syntax, evaluated in UTC).
+-- Morning run — "план на сьогодні" (today's overdue + due-today items).
+-- Adjust the cron expression to taste (pg_cron uses standard 5-field
+-- cron syntax, evaluated in UTC).
 select cron.schedule(
   'telegram-daily-digest',
-  '0 7 * * *',
+  '0 7 * * *', -- e.g. 07:00 UTC
   $$
   select net.http_post(
     url := 'https://<project-ref>.supabase.co/functions/v1/telegram-digest', -- REPLACE WITH YOUR VALUES
@@ -113,11 +114,35 @@ select cron.schedule(
       'Content-Type', 'application/json',
       'Authorization', 'Bearer <SUPABASE_SERVICE_ROLE_OR_ANON_KEY>' -- REPLACE WITH YOUR VALUES
     ),
-    body := '{}'::jsonb
+    body := jsonb_build_object('mode', 'morning')
+  );
+  $$
+);
+
+-- Evening run — "не встигли виконати" (same query, run later in the day;
+-- items completed earlier no longer match, so this naturally becomes a
+-- "what's still outstanding" reminder).
+select cron.schedule(
+  'telegram-evening-digest',
+  '0 18 * * *', -- e.g. 18:00 UTC
+  $$
+  select net.http_post(
+    url := 'https://<project-ref>.supabase.co/functions/v1/telegram-digest', -- REPLACE WITH YOUR VALUES
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer <SUPABASE_SERVICE_ROLE_OR_ANON_KEY>' -- REPLACE WITH YOUR VALUES
+    ),
+    body := jsonb_build_object('mode', 'evening')
   );
   $$
 );
 ```
+
+The `mode` field only changes the message header (`☀️ План на сьогодні:` vs
+`🌙 Не встигли виконати сьогодні:`) — the underlying "overdue + due today,
+not yet completed" query is identical either way. Omit `mode` (or pass an
+empty body, as in the manual curl test below) to get the original neutral
+`☀️ Ваш день:` header.
 
 Notes:
 

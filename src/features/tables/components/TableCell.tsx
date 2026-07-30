@@ -4,7 +4,7 @@ import { ExternalLink } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useDebouncedCallback } from '@/hooks/use-debounced-callback'
-import { cn } from '@/lib/utils'
+import { cn, openDatePicker } from '@/lib/utils'
 import { t } from '@/i18n'
 import type { TableColumnRow } from '@/types/database'
 import { getColumnOptions } from '../types'
@@ -92,6 +92,7 @@ function DateCell({ value, onCommit }: { value: string; onCommit: (v: string | n
     <input
       type="date"
       value={value}
+      onClick={openDatePicker}
       onChange={(e) => onCommit(e.target.value === '' ? null : e.target.value)}
       className={plainInputClassName}
     />

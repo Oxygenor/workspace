@@ -89,6 +89,19 @@
   }
 }
 
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'] {
+  color-scheme: light;
+  cursor: pointer;
+}
+
+.dark input[type='date'],
+.dark input[type='time'],
+.dark input[type='datetime-local'] {
+  color-scheme: dark;
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

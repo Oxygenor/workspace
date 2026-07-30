@@ -109,7 +109,7 @@ export function SectionContentsView({ section, items }: SectionContentsViewProps
                 >
                   <Icon className="h-5 w-5" style={{ color: item.color }} />
                 </span>
-                <span className="truncate text-sm font-medium text-foreground">{item.name}</span>
+                <span className="break-words text-sm font-medium text-foreground">{item.name}</span>
               </Card>
             )
           })}

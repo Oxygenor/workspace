@@ -136,6 +136,7 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
         style={{
           paddingLeft: depth * 16,
           transform: CSS.Translate.toString(transform),
+          backgroundColor: isActive ? undefined : `${item.color}14`,
         }}
         className={cn(
           'group flex h-8 items-center gap-1 rounded-md pr-1 text-sm transition-colors',
@@ -146,11 +147,14 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
       >
         <button
           type="button"
-          className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground', !isSection && 'invisible')}
+          className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded', !isSection && 'invisible')}
           onClick={() => toggleExpanded(item.id)}
           aria-label={expanded ? 'Згорнути' : 'Розгорнути'}
         >
-          <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-90')} />
+          <ChevronRight
+            className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-90')}
+            style={{ color: item.color }}
+          />
         </button>
 
         <button
@@ -202,8 +206,8 @@ export function TreeNode({ item, depth }: TreeNodeProps) {
 
         <div
           className={cn(
-            'hidden shrink-0 items-center gap-0.5 group-hover:flex',
-            (createMenuOpen || actionsMenuOpen) && 'flex',
+            'flex shrink-0 items-center gap-0.5 pointer-events-none opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100',
+            (createMenuOpen || actionsMenuOpen) && 'pointer-events-auto opacity-100',
           )}
         >
           {isSection && (

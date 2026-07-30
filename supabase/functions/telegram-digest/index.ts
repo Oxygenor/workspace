@@ -117,13 +117,20 @@ async function buildDigestForUser(userId: string): Promise<{ overdue: DigestEntr
   return { overdue, today }
 }
 
+type DigestMode = 'morning' | 'evening'
+
+const DIGEST_HEADERS: Record<DigestMode, string> = {
+  morning: '☀️ План на сьогодні:',
+  evening: '🌙 Не встигли виконати сьогодні:',
+}
+
 /** Returns `null` when there's nothing to report (caller should skip sending). */
-function formatDigestMessage(overdue: DigestEntry[], today: DigestEntry[]): string | null {
+function formatDigestMessage(overdue: DigestEntry[], today: DigestEntry[], mode: DigestMode | null): string | null {
   if (overdue.length === 0 && today.length === 0) {
     return null
   }
 
-  const lines: string[] = ['☀️ Ваш день:']
+  const lines: string[] = [mode ? DIGEST_HEADERS[mode] : '☀️ Ваш день:']
 
   if (overdue.length > 0) {
     lines.push('', '⏰ Прострочено:')
@@ -131,7 +138,8 @@ function formatDigestMessage(overdue: DigestEntry[], today: DigestEntry[]): stri
   }
 
   if (today.length > 0) {
-    lines.push('', '📅 Сьогодні:')
+    //lines.push('', '📅 Сьогодні:')
+    lines.push('')
     for (const entry of today) lines.push(`• ${entry.title}`)
   }
 
@@ -141,6 +149,14 @@ function formatDigestMessage(overdue: DigestEntry[], today: DigestEntry[]): stri
 Deno.serve(async (req) => {
   const preflight = handleCorsPreflight(req)
   if (preflight) return preflight
+
+  let mode: DigestMode | null = null
+  try {
+    const body = await req.json()
+    if (body?.mode === 'morning' || body?.mode === 'evening') mode = body.mode
+  } catch {
+    // No body / not JSON — fall back to the neutral header (e.g. manual curl test).
+  }
 
   try {
     const { data: integrations, error } = await supabase
@@ -161,7 +177,7 @@ Deno.serve(async (req) => {
       }
 
       const { overdue, today } = await buildDigestForUser(integration.user_id as string)
-      const message = formatDigestMessage(overdue, today)
+      const message = formatDigestMessage(overdue, today, mode)
 
       if (!message) {
         skipped += 1
