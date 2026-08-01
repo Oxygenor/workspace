@@ -133,6 +133,8 @@ export const uk = {
     clearFilters: 'Скинути фільтри',
     archiveColumn: 'Архівувати колонку',
     deleteColumn: 'Видалити колонку',
+    archiveCard: 'Архівувати картку',
+    deleteCard: 'Видалити картку',
     columnColor: 'Колір колонки',
     boardSettings: 'Налаштування дошки',
     emptyColumn: 'Немає карток',
@@ -541,6 +543,11 @@ export const uk = {
     typeLabel: 'Тип поля',
     deleteField: 'Видалити поле',
     noFields: 'Власних полів ще немає',
+  },
+  appearance: {
+    accentColor: 'Акцентний колір',
+    accentDefault: 'За замовчуванням',
+    customColor: 'Свій колір',
   },
   voiceNote: {
     record: 'Записати голосову нотатку',

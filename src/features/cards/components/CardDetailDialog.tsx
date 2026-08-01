@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Archive, Loader2, MoreHorizontal, Trash2 } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import {
   Dialog,
   DialogContent,
@@ -8,6 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -25,7 +33,7 @@ import { useDebouncedCallback } from '@/hooks/use-debounced-callback'
 import { cn, openDatePicker } from '@/lib/utils'
 import { COLUMN_COLORS } from '@/lib/validations/kanban'
 import { t } from '@/i18n'
-import { useColumns } from '@/features/kanban/hooks'
+import { useArchiveCard, useColumns, useDeleteCard } from '@/features/kanban/hooks'
 import { PRIORITY_LABELS, PRIORITY_ORDER } from '@/features/kanban/priority'
 import { useCurrentWorkspace, useWorkspaceMembers } from '@/features/workspace/hooks'
 import { TagPicker } from '@/features/tags/components/TagPicker'
@@ -59,9 +67,12 @@ export function CardDetailDialog({ cardId, boardId, open, onOpenChange }: CardDe
   const { workspace } = useCurrentWorkspace()
   const { data: members } = useWorkspaceMembers(workspace?.id)
   const updateCard = useUpdateCard(cardId, boardId)
+  const archiveCard = useArchiveCard(boardId)
+  const deleteCard = useDeleteCard(boardId)
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   useEffect(() => {
     if (card) {
@@ -97,17 +108,43 @@ export function CardDetailDialog({ cardId, boardId, open, onOpenChange }: CardDe
           <ScrollArea className="max-h-[90vh]">
             <div className="space-y-6 p-6">
               <DialogHeader>
-                <DialogDescription className="text-xs uppercase tracking-wide text-muted-foreground">
-                  #{card.card_number}
-                </DialogDescription>
-                <DialogTitle asChild>
-                  <Input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    onBlur={handleTitleBlur}
-                    className="h-auto border-none p-0 text-lg font-semibold shadow-none focus-visible:ring-0"
-                  />
-                </DialogTitle>
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <DialogDescription className="text-xs uppercase tracking-wide text-muted-foreground">
+                      #{card.card_number}
+                    </DialogDescription>
+                    <DialogTitle asChild>
+                      <Input
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        onBlur={handleTitleBlur}
+                        className="h-auto border-none p-0 text-lg font-semibold shadow-none focus-visible:ring-0"
+                      />
+                    </DialogTitle>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="shrink-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onSelect={() => archiveCard.mutate(cardId, { onSuccess: () => onOpenChange(false) })}
+                      >
+                        <Archive />
+                        {t.kanban.archiveCard}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => setDeleteConfirmOpen(true)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 />
+                        {t.kanban.deleteCard}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </DialogHeader>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -266,6 +303,15 @@ export function CardDetailDialog({ cardId, boardId, open, onOpenChange }: CardDe
           </ScrollArea>
         )}
       </DialogContent>
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title={t.tree.confirmDeleteTitle}
+        description={t.tree.confirmDeleteDescription}
+        confirmLabel={t.common.delete}
+        onConfirm={() => deleteCard.mutate(cardId, { onSuccess: () => onOpenChange(false) })}
+      />
     </Dialog>
   )
 }

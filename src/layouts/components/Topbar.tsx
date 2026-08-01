@@ -16,6 +16,7 @@ import { GlobalTimerWidget } from '@/features/time/components/GlobalTimerWidget'
 import { PomodoroWidget } from '@/features/time/components/PomodoroWidget'
 import { useUiStore } from '@/stores/ui-store'
 import { t } from '@/i18n'
+import { AccentColorPicker } from './AccentColorPicker'
 import { ThemeToggle } from './ThemeToggle'
 import { UserMenu } from './UserMenu'
 
@@ -92,6 +93,7 @@ export function Topbar() {
         <PomodoroWidget />
         <GlobalTimerWidget />
 
+        <AccentColorPicker />
         <ThemeToggle />
 
         <Popover>
