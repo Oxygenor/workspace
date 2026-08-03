@@ -24,6 +24,7 @@ import {
   reorderColumn,
   restoreCard,
   restoreColumn,
+  updateColumnAutoArchive,
   updateColumnColor,
   updateColumnWipLimit,
 } from './api'
@@ -72,6 +73,23 @@ export function useUpdateColumnWipLimit(boardId: string) {
   return useMutation({
     mutationFn: ({ columnId, wipLimit }: { columnId: string; wipLimit: number | null }) =>
       updateColumnWipLimit(columnId, wipLimit),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) }),
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+export function useUpdateColumnAutoArchive(boardId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      columnId,
+      isDoneColumn,
+      autoArchiveDays,
+    }: {
+      columnId: string
+      isDoneColumn: boolean
+      autoArchiveDays: number
+    }) => updateColumnAutoArchive(columnId, isDoneColumn, autoArchiveDays),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) }),
     onError: (error: Error) => toast.error(error.message),
   })

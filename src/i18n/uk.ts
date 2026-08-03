@@ -473,6 +473,8 @@ export const uk = {
     enable: 'Увімкнути автоархівацію',
     daysLabel: 'Днів після виконання',
     disabled: 'Вимкнено',
+    badgeTooltipPrefix: 'Автоархівація карток через',
+    badgeTooltipSuffix: 'дн.',
   },
   undo: {
     actionLabel: 'Скасувати',

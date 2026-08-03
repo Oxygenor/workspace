@@ -119,6 +119,20 @@ export async function updateColumnWipLimit(columnId: string, wipLimit: number | 
   return throwIfError(result, 'Не вдалося оновити ліміт колонки.')
 }
 
+export async function updateColumnAutoArchive(
+  columnId: string,
+  isDoneColumn: boolean,
+  autoArchiveDays: number,
+): Promise<KanbanColumnRow> {
+  const result = await supabase
+    .from('kanban_columns')
+    .update({ is_done_column: isDoneColumn, auto_archive_days: autoArchiveDays })
+    .eq('id', columnId)
+    .select('*')
+    .single()
+  return throwIfError(result, 'Не вдалося оновити налаштування автоархівації.')
+}
+
 export async function reorderColumn(columnId: string, position: number): Promise<void> {
   const { error } = await supabase.from('kanban_columns').update({ position }).eq('id', columnId)
   if (error) throw toAppError(error, 'Не вдалося змінити порядок колонок.')

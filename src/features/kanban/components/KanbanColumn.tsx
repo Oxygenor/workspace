@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Archive, GripVertical, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
+import { Archive, CheckCircle2, GripVertical, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +29,7 @@ import {
   useCreateCard,
   useDeleteColumn,
   useRenameColumn,
+  useUpdateColumnAutoArchive,
   useUpdateColumnColor,
   useUpdateColumnWipLimit,
 } from '../hooks'
@@ -56,6 +58,7 @@ export function KanbanColumn({
   const renameColumn = useRenameColumn(boardId)
   const updateColor = useUpdateColumnColor(boardId)
   const updateWipLimit = useUpdateColumnWipLimit(boardId)
+  const updateAutoArchive = useUpdateColumnAutoArchive(boardId)
   const archiveColumn = useArchiveColumn(boardId)
   const deleteColumn = useDeleteColumn(boardId)
   const createCard = useCreateCard(boardId)
@@ -66,6 +69,7 @@ export function KanbanColumn({
   const [newCardTitle, setNewCardTitle] = useState('')
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [draftWipLimit, setDraftWipLimit] = useState(column.wip_limit ? String(column.wip_limit) : '')
+  const [draftArchiveDays, setDraftArchiveDays] = useState(String(column.auto_archive_days))
 
   const wipLimitExceeded = column.wip_limit != null && cards.length > column.wip_limit
 
@@ -92,6 +96,16 @@ export function KanbanColumn({
       updateWipLimit.mutate({ columnId: column.id, wipLimit: nextLimit })
     }
     setDraftWipLimit(nextLimit ? String(nextLimit) : '')
+  }
+
+  function commitArchiveDays() {
+    const trimmed = draftArchiveDays.trim()
+    const parsed = trimmed ? Number.parseInt(trimmed, 10) : 7
+    const days = !parsed || parsed <= 0 ? 7 : parsed
+    if (days !== column.auto_archive_days) {
+      updateAutoArchive.mutate({ columnId: column.id, isDoneColumn: column.is_done_column, autoArchiveDays: days })
+    }
+    setDraftArchiveDays(String(days))
   }
 
   function handleAddCard() {
@@ -121,6 +135,14 @@ export function KanbanColumn({
           <GripVertical className="h-4 w-4" />
         </button>
         <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: column.color }} />
+        {column.is_done_column && (
+          <span
+            className="shrink-0"
+            title={`${t.autoArchive.badgeTooltipPrefix} ${column.auto_archive_days} ${t.autoArchive.badgeTooltipSuffix}`}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+          </span>
+        )}
 
         {isEditingName ? (
           <Input
@@ -190,6 +212,39 @@ export function KanbanColumn({
                     placeholder={t.wipLimit.placeholder}
                     className="h-8"
                   />
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+            <DropdownMenuSub onOpenChange={(open) => !open && commitArchiveDays()}>
+              <DropdownMenuSubTrigger>{t.autoArchive.settingsTitle}</DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent className="w-56 space-y-2 p-2">
+                  <div className="flex items-center justify-between gap-2 px-1">
+                    <span className="text-sm">{t.autoArchive.enable}</span>
+                    <Switch
+                      checked={column.is_done_column}
+                      onCheckedChange={(checked) =>
+                        updateAutoArchive.mutate({
+                          columnId: column.id,
+                          isDoneColumn: checked,
+                          autoArchiveDays: column.auto_archive_days,
+                        })
+                      }
+                    />
+                  </div>
+                  {column.is_done_column && (
+                    <div className="space-y-1 px-1">
+                      <span className="text-xs text-muted-foreground">{t.autoArchive.daysLabel}</span>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={draftArchiveDays}
+                        onChange={(e) => setDraftArchiveDays(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && commitArchiveDays()}
+                        className="h-8"
+                      />
+                    </div>
+                  )}
                 </DropdownMenuSubContent>
               </DropdownMenuPortal>
             </DropdownMenuSub>

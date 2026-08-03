@@ -58,6 +58,8 @@ export interface KanbanColumnRow extends Timestamped {
   color: string
   position: number
   wip_limit: number | null
+  is_done_column: boolean
+  auto_archive_days: number
   archived_at: string | null
 }
 
@@ -74,6 +76,7 @@ export interface KanbanCardRow extends Timestamped {
   due_date: string | null
   position: number
   created_by: string | null
+  column_entered_at: string
   archived_at: string | null
 }
 
