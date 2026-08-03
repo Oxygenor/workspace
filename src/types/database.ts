@@ -266,6 +266,26 @@ export interface TelegramLinkCodeRow {
   expires_at: string
 }
 
+export interface UserScheduleSettingsRow extends Timestamped {
+  user_id: string
+  work_start: string
+  work_end: string
+  break_start: string | null
+  break_end: string | null
+  timezone: string
+  idle_nudge_enabled: boolean
+  last_idle_nudge_at: string | null
+}
+
+export interface UserDayOffRow {
+  id: string
+  user_id: string
+  weekday: number | null
+  specific_date: string | null
+  is_working: boolean
+  created_at: string
+}
+
 export interface TaskCustomFieldRow {
   id: string
   task_list_id: string

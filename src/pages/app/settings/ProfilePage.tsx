@@ -14,6 +14,7 @@ import { profileSchema, type ProfileFormValues } from '@/lib/validations/auth'
 import { useAuth } from '@/features/auth/use-auth'
 import { useProfile, useUpdateProfileName, useUploadAvatar } from '@/features/profile/hooks'
 import { IntegrationsSettings } from '@/features/integrations/components/IntegrationsSettings'
+import { ScheduleSettings } from '@/features/schedule/components/ScheduleSettings'
 import { t } from '@/i18n'
 
 function useNotificationPermission() {
@@ -160,6 +161,15 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent>
           <IntegrationsSettings />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t.schedule.title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScheduleSettings />
         </CardContent>
       </Card>
     </div>

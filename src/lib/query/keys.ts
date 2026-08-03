@@ -50,4 +50,7 @@ export const queryKeys = {
     ['time-entries-total', cardId ?? null, taskId ?? null] as const,
 
   userIntegrations: (userId: string | undefined) => ['user-integrations', userId] as const,
+
+  scheduleSettings: (userId: string | undefined) => ['schedule-settings', userId] as const,
+  daysOff: (userId: string | undefined) => ['days-off', userId] as const,
 }

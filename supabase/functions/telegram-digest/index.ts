@@ -17,34 +17,19 @@
 // this is observable when triggered manually or inspected via cron logs.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
+import { sendTelegramMessage } from '../_shared/telegram.ts'
+import { formatIsoDate, getLocalParts, isDayOff } from '../_shared/schedule.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN') ?? ''
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+const DEFAULT_TIMEZONE = 'Europe/Kyiv'
 
 interface DigestEntry {
   title: string
   due_date: string
-}
-
-async function sendTelegramMessage(chatId: string, text: string): Promise<boolean> {
-  if (!TELEGRAM_BOT_TOKEN) {
-    console.error('TELEGRAM_BOT_TOKEN is not set — cannot send Telegram message')
-    return false
-  }
-  try {
-    const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text }),
-    })
-    return res.ok
-  } catch (error) {
-    console.error('Failed to send Telegram message', error)
-    return false
-  }
 }
 
 function endOfToday(): Date {
@@ -98,15 +83,26 @@ async function buildDigestForUser(userId: string): Promise<{ overdue: DigestEntr
   }
 
   if (kanbanIds.length > 0) {
+    const { data: doneColumns } = await supabase
+      .from('kanban_columns')
+      .select('id')
+      .in('board_id', kanbanIds)
+      .eq('is_done_column', true)
+    const doneColumnIds = new Set((doneColumns ?? []).map((c: { id: string }) => c.id))
+
     const { data: cards } = await supabase
       .from('kanban_cards')
-      .select('title, due_date')
+      .select('title, due_date, column_id')
       .in('board_id', kanbanIds)
       .is('archived_at', null)
       .not('due_date', 'is', null)
       .lte('due_date', endToday.toISOString())
 
     for (const card of cards ?? []) {
+      // Card already sits in a "done" column — treat it as completed even
+      // though it hasn't been auto-archived yet (that only happens after
+      // the column's configured grace period).
+      if (doneColumnIds.has(card.column_id as string)) continue
       entries.push({ title: `🗂️ ${card.title}`, due_date: card.due_date as string })
     }
   }
@@ -171,12 +167,27 @@ Deno.serve(async (req) => {
 
     for (const integration of integrations ?? []) {
       const chatId = integration.telegram_chat_id as string | null
+      const userId = integration.user_id as string
       if (!chatId) {
         skipped += 1
         continue
       }
 
-      const { overdue, today } = await buildDigestForUser(integration.user_id as string)
+      const { data: schedule } = await supabase
+        .from('user_schedule_settings')
+        .select('timezone')
+        .eq('user_id', userId)
+        .maybeSingle()
+      const timezone = (schedule?.timezone as string | undefined) ?? DEFAULT_TIMEZONE
+
+      const localNow = getLocalParts(new Date(), timezone)
+      const dayOff = await isDayOff(supabase, userId, formatIsoDate(localNow), localNow.weekday)
+      if (dayOff) {
+        skipped += 1
+        continue
+      }
+
+      const { overdue, today } = await buildDigestForUser(userId)
       const message = formatDigestMessage(overdue, today, mode)
 
       if (!message) {

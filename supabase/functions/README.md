@@ -1,11 +1,15 @@
 # Supabase Edge Functions — Telegram digest bot & ICS calendar feed
 
-This directory contains three Deno Edge Functions that back two Workspace
+This directory contains Deno Edge Functions that back three Workspace
 features:
 
 - **Telegram daily digest bot** — `telegram-webhook` (handles the one-time
   account-linking handshake) + `telegram-digest` (sends the daily "Мій
   день" message, meant to run on a schedule).
+- **Idle-card nudge** — `idle-nudge` (checks every ~10 minutes whether the
+  user has no running card/task timer during their configured work hours
+  and pings them on Telegram if so; respects `user_schedule_settings` /
+  `user_days_off`, see `supabase/migrations/0012_idle_nudge_and_days_off.sql`).
 - **ICS calendar feed** — `ics-feed` (a public, token-protected endpoint you
   subscribe to from Google Calendar / Apple Calendar / Outlook).
 
@@ -54,13 +58,14 @@ supabase secrets set TELEGRAM_BOT_TOKEN=123456789:AAExampleTokenDoNotUseThisValu
 
 ## 4. Deploy the functions
 
-All three must be deployed with `--no-verify-jwt`, because their callers
+All of them must be deployed with `--no-verify-jwt`, because their callers
 (Telegram's servers, calendar apps, pg_cron) cannot send a Supabase auth
 JWT:
 
 ```sh
 supabase functions deploy telegram-webhook --no-verify-jwt
 supabase functions deploy telegram-digest --no-verify-jwt
+supabase functions deploy idle-nudge --no-verify-jwt
 supabase functions deploy ics-feed --no-verify-jwt
 ```
 
@@ -156,6 +161,33 @@ Notes:
 - To change the schedule later: `select cron.alter_job(job_id, schedule := '...')`
   or unschedule with `select cron.unschedule('telegram-daily-digest');`.
 - To inspect run history: `select * from cron.job_run_details order by start_time desc limit 20;`.
+
+## 6b. Schedule the idle-nudge check (pg_cron + pg_net)
+
+Same pattern, but every 10 minutes so the 30-minute idle threshold (see
+`idle-nudge/index.ts`) is checked with reasonable precision. Run this once,
+directly in the SQL Editor, same caveats as above (embeds project URL/key,
+don't commit it):
+
+```sql
+select cron.schedule(
+  'idle-nudge-check',
+  '*/10 * * * *',
+  $$
+  select net.http_post(
+    url := 'https://<project-ref>.supabase.co/functions/v1/idle-nudge', -- REPLACE WITH YOUR VALUES
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer <SUPABASE_SERVICE_ROLE_OR_ANON_KEY>' -- REPLACE WITH YOUR VALUES
+    ),
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
+
+Unschedule with `select cron.unschedule('idle-nudge-check');` if you ever
+want to turn this off without disabling `idle_nudge_enabled` per user.
 
 ## 7. How to test
 
