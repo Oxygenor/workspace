@@ -1,4 +1,4 @@
-import { endOfMonth, endOfWeek, startOfMonth, startOfWeek, subDays, subWeeks } from 'date-fns'
+import { differenceInCalendarDays, endOfMonth, endOfWeek, startOfMonth, startOfWeek, subDays, subWeeks } from 'date-fns'
 
 import { supabase } from '@/lib/supabase/client'
 import { throwIfError } from '@/lib/supabase/errors'
@@ -143,41 +143,43 @@ export interface ClosedCardSummary {
   id: string
   title: string
   board_id: string
-  updated_at: string
+  /** When the card entered its current (done) column — i.e. when it was closed. */
+  closed_at: string
+  /** Days between card creation and entering the done column. */
+  cycleDays: number
 }
 
-/**
- * Heuristic for "closed this week": kanban_cards has no explicit "done" flag, so we
- * treat a card that currently sits in its board's last column (highest `position`)
- * and was updated within the last `sinceDays` days as closed.
- */
-export async function fetchClosedCardsThisWeek(sinceDays = 7): Promise<ClosedCardSummary[]> {
+export interface ClosedCardsReport {
+  cards: ClosedCardSummary[]
+  avgCycleDays: number | null
+}
+
+/** Cards currently sitting in a column flagged `is_done_column`, entered within the last `sinceDays` days. */
+export async function fetchClosedCardsThisWeek(sinceDays = 7): Promise<ClosedCardsReport> {
   const since = subDays(new Date(), sinceDays).toISOString()
+
+  const columnsResult = await supabase.from('kanban_columns').select('id').eq('is_done_column', true).is('archived_at', null)
+  const doneColumns = throwIfError(columnsResult, 'Не вдалося завантажити колонки.')
+  if (doneColumns.length === 0) return { cards: [], avgCycleDays: null }
+
   const cardsResult = await supabase
     .from('kanban_cards')
-    .select('id, board_id, column_id, title, updated_at')
+    .select('id, board_id, title, created_at, column_entered_at')
+    .in('column_id', doneColumns.map((c) => c.id))
     .is('archived_at', null)
-    .gte('updated_at', since)
-  const cards = throwIfError(cardsResult, 'Не вдалося завантажити картки.')
-  if (cards.length === 0) return []
+    .gte('column_entered_at', since)
+  const cardRows = throwIfError(cardsResult, 'Не вдалося завантажити картки.')
 
-  const boardIds = [...new Set(cards.map((c) => c.board_id))]
-  const columnsResult = await supabase
-    .from('kanban_columns')
-    .select('id, board_id, position')
-    .in('board_id', boardIds)
-    .is('archived_at', null)
-  const columns = throwIfError(columnsResult, 'Не вдалося завантажити колонки.')
+  const cards: ClosedCardSummary[] = cardRows.map((card) => ({
+    id: card.id,
+    title: card.title,
+    board_id: card.board_id,
+    closed_at: card.column_entered_at,
+    cycleDays: Math.max(0, differenceInCalendarDays(new Date(card.column_entered_at), new Date(card.created_at))),
+  }))
 
-  const lastColumnByBoard = new Map<string, { columnId: string; position: number }>()
-  for (const column of columns) {
-    const current = lastColumnByBoard.get(column.board_id)
-    if (!current || column.position > current.position) {
-      lastColumnByBoard.set(column.board_id, { columnId: column.id, position: column.position })
-    }
-  }
+  const avgCycleDays =
+    cards.length === 0 ? null : Math.round((cards.reduce((sum, c) => sum + c.cycleDays, 0) / cards.length) * 10) / 10
 
-  return cards
-    .filter((card) => lastColumnByBoard.get(card.board_id)?.columnId === card.column_id)
-    .map((card) => ({ id: card.id, title: card.title, board_id: card.board_id, updated_at: card.updated_at }))
+  return { cards, avgCycleDays }
 }

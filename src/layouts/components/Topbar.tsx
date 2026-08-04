@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Bell, LayoutGrid, Menu, Search } from 'lucide-react'
+import { Bell, Inbox, LayoutGrid, Menu, Search } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -29,6 +29,7 @@ export function Topbar() {
   const { workspace } = useCurrentWorkspace()
   const toggleSidebar = useUiStore((s) => s.toggleSidebar)
   const setCommandPaletteOpen = useUiStore((s) => s.setCommandPaletteOpen)
+  const setQuickCaptureOpen = useUiStore((s) => s.setQuickCaptureOpen)
   const setPendingRenameItemId = useUiStore((s) => s.setPendingRenameItemId)
   const { data: items } = useWorkspaceItems()
   const createItem = useCreateItem()
@@ -89,6 +90,16 @@ export function Topbar() {
             <LayoutGrid className="h-4 w-4" />
           </Button>
         </CreateItemMenu>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setQuickCaptureOpen(true)}
+          title={t.inbox.captureTitle}
+          aria-label={t.inbox.captureTitle}
+        >
+          <Inbox className="h-4 w-4" />
+        </Button>
 
         <PomodoroWidget />
         <GlobalTimerWidget />

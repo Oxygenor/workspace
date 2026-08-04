@@ -17,6 +17,7 @@ export const queryKeys = {
   cardComments: (cardId: string | undefined) => ['card-comments', cardId] as const,
   cardAttachments: (cardId: string | undefined) => ['card-attachments', cardId] as const,
   cardLabels: (cardId: string | undefined) => ['card-labels', cardId] as const,
+  cardDependencies: (boardId: string | undefined) => ['card-dependencies', boardId] as const,
   boardLabels: (boardId: string | undefined) => ['board-labels', boardId] as const,
 
   document: (itemId: string | undefined) => ['document', itemId] as const,

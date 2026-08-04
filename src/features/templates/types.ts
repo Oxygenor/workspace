@@ -1,4 +1,4 @@
-import type { ItemType } from '@/types/database'
+import type { ItemType, PriorityLevel } from '@/types/database'
 
 export interface SectionTemplateNode {
   type: ItemType
@@ -14,4 +14,11 @@ export interface SectionTemplatePayload {
 
 export interface ChecklistTemplatePayload {
   items: string[]
+}
+
+export interface CardTemplatePayload {
+  title?: string
+  checklistItems?: string[]
+  labelIds?: string[]
+  priority?: PriorityLevel
 }

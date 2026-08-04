@@ -29,6 +29,15 @@ export async function updateScheduleSettings(
   return throwIfError(result, 'Не вдалося оновити робочий графік.')
 }
 
+/** Lets the server-side idle-nudge check see an active Pomodoro break (client-only state otherwise). */
+export async function setPomodoroBreakUntil(userId: string, until: string | null): Promise<void> {
+  const { error } = await supabase
+    .from('user_schedule_settings')
+    .update({ pomodoro_break_until: until })
+    .eq('user_id', userId)
+  if (error) throw toAppError(error, 'Не вдалося синхронізувати перерву Pomodoro.')
+}
+
 export async function fetchDaysOff(userId: string): Promise<UserDayOffRow[]> {
   const result = await supabase
     .from('user_days_off')

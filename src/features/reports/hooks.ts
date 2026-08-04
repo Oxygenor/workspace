@@ -43,8 +43,10 @@ export function useCompletedTasksThisWeek() {
 }
 
 export function useClosedCardsThisWeek() {
+  const { user } = useAuth()
   return useQuery({
-    queryKey: ['reports', 'closed-cards'],
+    queryKey: ['reports', 'closed-cards', user?.id],
     queryFn: () => fetchClosedCardsThisWeek(),
+    enabled: Boolean(user),
   })
 }

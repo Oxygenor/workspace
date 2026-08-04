@@ -37,17 +37,29 @@ interface ScheduleSettings {
   timezone: string
   idle_nudge_enabled: boolean
   last_idle_nudge_at: string | null
+  idle_nudge_paused_until: string | null
+  pomodoro_break_until: string | null
 }
 
 async function checkUser(userId: string, chatId: string): Promise<'sent' | 'skipped'> {
   const { data: scheduleRow } = await supabase
     .from('user_schedule_settings')
-    .select('work_start, work_end, break_start, break_end, timezone, idle_nudge_enabled, last_idle_nudge_at')
+    .select(
+      'work_start, work_end, break_start, break_end, timezone, idle_nudge_enabled, last_idle_nudge_at, idle_nudge_paused_until, pomodoro_break_until',
+    )
     .eq('user_id', userId)
     .maybeSingle()
   const schedule = scheduleRow as ScheduleSettings | null
 
   if (!schedule || !schedule.idle_nudge_enabled) return 'skipped'
+
+  if (schedule.idle_nudge_paused_until && new Date(schedule.idle_nudge_paused_until).getTime() > Date.now()) {
+    return 'skipped'
+  }
+
+  if (schedule.pomodoro_break_until && new Date(schedule.pomodoro_break_until).getTime() > Date.now()) {
+    return 'skipped'
+  }
 
   const timezone = schedule.timezone || DEFAULT_TIMEZONE
   const localNow = getLocalParts(new Date(), timezone)

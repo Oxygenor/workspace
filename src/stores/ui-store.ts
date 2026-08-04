@@ -18,6 +18,9 @@ interface UiState {
   commandPaletteOpen: boolean
   setCommandPaletteOpen: (open: boolean) => void
 
+  quickCaptureOpen: boolean
+  setQuickCaptureOpen: (open: boolean) => void
+
   pendingRenameItemId: string | null
   setPendingRenameItemId: (itemId: string | null) => void
 
@@ -45,6 +48,9 @@ export const useUiStore = create<UiState>()(
 
       commandPaletteOpen: false,
       setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
+
+      quickCaptureOpen: false,
+      setQuickCaptureOpen: (open) => set({ quickCaptureOpen: open }),
 
       pendingRenameItemId: null,
       setPendingRenameItemId: (itemId) => set({ pendingRenameItemId: itemId }),

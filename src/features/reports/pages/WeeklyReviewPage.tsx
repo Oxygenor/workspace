@@ -19,7 +19,8 @@ function formatDate(iso: string): string {
 export default function WeeklyReviewPage() {
   const navigate = useNavigate()
   const { data: completedTasks, isLoading: completedTasksLoading } = useCompletedTasksThisWeek()
-  const { data: closedCards, isLoading: closedCardsLoading } = useClosedCardsThisWeek()
+  const { data: closedCardsReport, isLoading: closedCardsLoading } = useClosedCardsThisWeek()
+  const closedCards = closedCardsReport?.cards
   const { data: timeSummary, isLoading: timeSummaryLoading } = useWeeklyTimeSummary()
   const { data: upcomingDeadlines, isLoading: upcomingLoading } = useUpcomingDeadlines()
 
@@ -71,6 +72,11 @@ export default function WeeklyReviewPage() {
           {!closedCardsLoading && (closedCards?.length ?? 0) === 0 && (
             <p className="text-sm text-muted-foreground">{t.reports.noClosedCards}</p>
           )}
+          {!closedCardsLoading && closedCardsReport?.avgCycleDays != null && (
+            <p className="text-xs text-muted-foreground">
+              {t.reports.avgCycleDaysPrefix} {closedCardsReport.avgCycleDays} {t.reports.avgCycleDaysSuffix}
+            </p>
+          )}
           {closedCards?.map((card) => (
             <button
               key={card.id}
@@ -78,7 +84,9 @@ export default function WeeklyReviewPage() {
               className="flex w-full items-center justify-between gap-2 rounded-md p-2 text-left text-sm hover:bg-accent"
             >
               <span className="truncate">{card.title}</span>
-              <span className="shrink-0 text-xs text-muted-foreground">{formatDate(card.updated_at)}</span>
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {formatDate(card.closed_at)} · {card.cycleDays} {t.reports.cycleDaysUnit}
+              </span>
             </button>
           ))}
         </CardContent>

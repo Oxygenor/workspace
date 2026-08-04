@@ -14,6 +14,7 @@ import ItemPage from '@/pages/app/ItemPage'
 import SearchPage from '@/pages/app/SearchPage'
 import FavoritesPage from '@/pages/app/FavoritesPage'
 import ArchivePage from '@/pages/app/ArchivePage'
+import InboxPage from '@/pages/app/InboxPage'
 import TagsPage from '@/features/tags/pages/TagsPage'
 import TimeReportPage from '@/features/reports/pages/TimeReportPage'
 import WeeklyReviewPage from '@/features/reports/pages/WeeklyReviewPage'
@@ -53,6 +54,7 @@ export const router = createBrowserRouter([
           { path: 'split/:leftId?/:rightId?', element: <SplitViewPage /> },
           { path: 'search', element: <SearchPage /> },
           { path: 'favorites', element: <FavoritesPage /> },
+          { path: 'inbox', element: <InboxPage /> },
           { path: 'archive', element: <ArchivePage /> },
           { path: 'tags', element: <TagsPage /> },
           { path: 'reports/time', element: <TimeReportPage /> },

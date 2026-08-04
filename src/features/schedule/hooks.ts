@@ -8,6 +8,7 @@ import {
   fetchDaysOff,
   fetchScheduleSettings,
   removeDateException,
+  setPomodoroBreakUntil,
   setWeekdayOff,
   updateScheduleSettings,
   type ScheduleSettingsUpdate,
@@ -29,6 +30,15 @@ export function useUpdateScheduleSettings() {
     mutationFn: (update: ScheduleSettingsUpdate) => updateScheduleSettings(user!.id, update),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.scheduleSettings(user?.id) }),
     onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+/** Silent background sync — no toasts, this just lets the server-side idle-nudge check see Pomodoro break state. */
+export function useSetPomodoroBreakUntil() {
+  const { user } = useAuth()
+  return useMutation({
+    mutationFn: (until: string | null) => setPomodoroBreakUntil(user!.id, until),
+    onError: (error: Error) => console.error('Failed to sync Pomodoro break state', error),
   })
 }
 

@@ -7,9 +7,11 @@ import { useCurrentWorkspace } from '@/features/workspace/hooks'
 import type { TemplateKind, WorkspaceItemRow } from '@/types/database'
 import {
   applyChecklistTemplate,
+  createFromCardTemplate,
   createFromSectionTemplate,
   deleteTemplate,
   fetchTemplates,
+  saveCardAsTemplate,
   saveChecklistAsTemplate,
   saveSectionAsTemplate,
 } from './api'
@@ -81,6 +83,31 @@ export function useSaveChecklistAsTemplate() {
       queryClient.invalidateQueries({ queryKey: templatesKey(workspace?.id, 'checklist') })
       toast.success('Шаблон чекліста збережено')
     },
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+export function useSaveCardAsTemplate() {
+  const { workspace } = useCurrentWorkspace()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ name, payload }: { name: string; payload: Parameters<typeof saveCardAsTemplate>[2] }) =>
+      saveCardAsTemplate(workspace!.id, name, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: templatesKey(workspace?.id, 'card') })
+      toast.success('Шаблон картки збережено')
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+export function useCreateFromCardTemplate(boardId: string) {
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ template, columnId, position }: { template: Parameters<typeof createFromCardTemplate>[0]; columnId: string; position: number }) =>
+      createFromCardTemplate(template, boardId, columnId, position, user!.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.kanbanCards(boardId) }),
     onError: (error: Error) => toast.error(error.message),
   })
 }

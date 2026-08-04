@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { ReminderChecker } from '@/features/calendar/components/ReminderChecker'
+import { QuickCaptureDialog } from '@/features/inbox/components/QuickCaptureDialog'
 import { GlobalSearch } from '@/features/search/components/GlobalSearch'
 import { PomodoroEngine } from '@/features/time/components/PomodoroEngine'
 import { GlobalHotkeys } from '@/features/workspace-tree/components/GlobalHotkeys'
@@ -22,6 +23,7 @@ export function AppLayout() {
       </div>
       <MobileSidebarDrawer />
       <GlobalSearch />
+      <QuickCaptureDialog />
       <GlobalHotkeys />
       <ReminderChecker />
       <PomodoroEngine />

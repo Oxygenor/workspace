@@ -1,8 +1,15 @@
 import { supabase } from '@/lib/supabase/client'
 import { throwIfError, toAppError } from '@/lib/supabase/errors'
 import { createWorkspaceItem } from '@/features/workspace-tree/api'
-import type { TemplateKind, TemplateRow, WorkspaceItemRow } from '@/types/database'
-import type { ChecklistTemplatePayload, SectionTemplateNode, SectionTemplatePayload } from './types'
+import { addCardLabel, updateCard } from '@/features/cards/api'
+import { createCard } from '@/features/kanban/api'
+import type { KanbanCardRow, TemplateKind, TemplateRow, WorkspaceItemRow } from '@/types/database'
+import type {
+  CardTemplatePayload,
+  ChecklistTemplatePayload,
+  SectionTemplateNode,
+  SectionTemplatePayload,
+} from './types'
 
 export async function fetchTemplates(workspaceId: string, kind: TemplateKind): Promise<TemplateRow[]> {
   const result = await supabase
@@ -119,6 +126,57 @@ export async function saveChecklistAsTemplate(
     .select('*')
     .single()
   return throwIfError(result, 'Не вдалося зберегти шаблон чекліста.')
+}
+
+export async function saveCardAsTemplate(
+  workspaceId: string,
+  name: string,
+  payload: CardTemplatePayload,
+): Promise<TemplateRow> {
+  const result = await supabase
+    .from('templates')
+    .insert({ workspace_id: workspaceId, kind: 'card', name, payload })
+    .select('*')
+    .single()
+  return throwIfError(result, 'Не вдалося зберегти шаблон картки.')
+}
+
+export async function createFromCardTemplate(
+  template: TemplateRow,
+  boardId: string,
+  columnId: string,
+  position: number,
+  createdBy: string,
+): Promise<KanbanCardRow> {
+  const payload = template.payload as unknown as CardTemplatePayload
+
+  const card = await createCard({
+    boardId,
+    columnId,
+    title: payload.title?.trim() || template.name,
+    position,
+    createdBy,
+  })
+
+  if (payload.priority) {
+    await updateCard(card.id, { priority: payload.priority })
+  }
+
+  if (payload.checklistItems && payload.checklistItems.length > 0) {
+    const rows = payload.checklistItems.map((title, index) => ({
+      card_id: card.id,
+      title,
+      position: (index + 1) * 1000,
+    }))
+    const { error } = await supabase.from('checklist_items').insert(rows)
+    if (error) throw toAppError(error, 'Не вдалося застосувати чекліст шаблону.')
+  }
+
+  if (payload.labelIds && payload.labelIds.length > 0) {
+    await Promise.all(payload.labelIds.map((labelId) => addCardLabel(card.id, labelId)))
+  }
+
+  return card
 }
 
 export async function applyChecklistTemplate(

@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase/client'
 import { throwIfError, toAppError } from '@/lib/supabase/errors'
-import type { KanbanColumnRow, LabelRow, PriorityLevel } from '@/types/database'
+import type { CardDependencyRow, KanbanColumnRow, LabelRow, PriorityLevel } from '@/types/database'
 import type { KanbanCardSummary } from './types'
 
 export async function fetchColumns(boardId: string): Promise<KanbanColumnRow[]> {
@@ -209,6 +209,33 @@ export async function restoreCard(cardId: string): Promise<void> {
 export async function deleteCard(cardId: string): Promise<void> {
   const { error } = await supabase.from('kanban_cards').delete().eq('id', cardId)
   if (error) throw toAppError(error, 'Не вдалося видалити картку.')
+}
+
+export async function fetchCardDependencies(boardId: string): Promise<CardDependencyRow[]> {
+  const cardIdsResult = await supabase.from('kanban_cards').select('id').eq('board_id', boardId)
+  const cardRows = throwIfError(cardIdsResult, 'Не вдалося завантажити залежності карток.')
+  const cardIds = cardRows.map((row: { id: string }) => row.id)
+  if (cardIds.length === 0) return []
+  const result = await supabase.from('card_dependencies').select('*').in('card_id', cardIds)
+  return throwIfError(result, 'Не вдалося завантажити залежності карток.')
+}
+
+export async function addCardDependency(cardId: string, dependsOnCardId: string): Promise<CardDependencyRow> {
+  const result = await supabase
+    .from('card_dependencies')
+    .insert({ card_id: cardId, depends_on_card_id: dependsOnCardId })
+    .select('*')
+    .single()
+  return throwIfError(result, 'Не вдалося додати залежність.')
+}
+
+export async function removeCardDependency(cardId: string, dependsOnCardId: string): Promise<void> {
+  const { error } = await supabase
+    .from('card_dependencies')
+    .delete()
+    .eq('card_id', cardId)
+    .eq('depends_on_card_id', dependsOnCardId)
+  if (error) throw toAppError(error, 'Не вдалося видалити залежність.')
 }
 
 export async function createLabel(boardId: string, name: string, color: string): Promise<LabelRow> {

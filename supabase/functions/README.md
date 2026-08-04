@@ -4,12 +4,16 @@ This directory contains Deno Edge Functions that back three Workspace
 features:
 
 - **Telegram daily digest bot** — `telegram-webhook` (handles the one-time
-  account-linking handshake) + `telegram-digest` (sends the daily "Мій
-  день" message, meant to run on a schedule).
+  account-linking handshake, plus `/today`, `/pause <minutes>`, and
+  plain-text quick capture) + `telegram-digest` (sends the daily "Мій
+  день" message, meant to run on a schedule). Both share the digest-building
+  logic in `_shared/digest.ts`.
 - **Idle-card nudge** — `idle-nudge` (checks every ~10 minutes whether the
   user has no running card/task timer during their configured work hours
   and pings them on Telegram if so; respects `user_schedule_settings` /
   `user_days_off`, see `supabase/migrations/0012_idle_nudge_and_days_off.sql`).
+- **Weekly summary** — `weekly-summary` (once a week: hours tracked, cards
+  closed, longest-untouched open card).
 - **ICS calendar feed** — `ics-feed` (a public, token-protected endpoint you
   subscribe to from Google Calendar / Apple Calendar / Outlook).
 
@@ -46,6 +50,17 @@ The app deliberately does not know or display the bot's username anywhere
 single-user-per-workspace) which bot to message, e.g. in your own
 onboarding notes.
 
+### Bot commands
+
+Once linked (`/start <code>`), the bot understands:
+
+- `/today` — sends the digest on demand (same content as the scheduled
+  morning/evening run).
+- `/pause` or `/pause <minutes>` — silences idle-nudge for that many minutes
+  (default 60) without disabling it entirely.
+- Anything else (no leading `/`) is treated as a quick capture — stored as
+  an `inbox_items` row, triage it later on the app's Inbox page.
+
 ## 3. Set the bot token as a secret
 
 Edge Functions read secrets via `Deno.env.get(...)`. `SUPABASE_URL` and
@@ -66,6 +81,7 @@ JWT:
 supabase functions deploy telegram-webhook --no-verify-jwt
 supabase functions deploy telegram-digest --no-verify-jwt
 supabase functions deploy idle-nudge --no-verify-jwt
+supabase functions deploy weekly-summary --no-verify-jwt
 supabase functions deploy ics-feed --no-verify-jwt
 ```
 
@@ -188,6 +204,27 @@ select cron.schedule(
 
 Unschedule with `select cron.unschedule('idle-nudge-check');` if you ever
 want to turn this off without disabling `idle_nudge_enabled` per user.
+
+## 6c. Schedule the weekly summary (pg_cron + pg_net)
+
+Once a week, e.g. Sunday evening. Same ad-hoc SQL Editor caveats as above:
+
+```sql
+select cron.schedule(
+  'weekly-summary',
+  '0 18 * * 0', -- Sunday 18:00 UTC
+  $$
+  select net.http_post(
+    url := 'https://<project-ref>.supabase.co/functions/v1/weekly-summary', -- REPLACE WITH YOUR VALUES
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer <SUPABASE_SERVICE_ROLE_OR_ANON_KEY>' -- REPLACE WITH YOUR VALUES
+    ),
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
 
 ## 7. How to test
 

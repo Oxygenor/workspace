@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { CheckSquare, Clock, MessageSquare, Paperclip, Trash2 } from 'lucide-react'
+import { CheckSquare, Clock, Hourglass, MessageSquare, Paperclip, Trash2 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,7 @@ import { t } from '@/i18n'
 import { PRIORITY_CLASSES, PRIORITY_LABELS } from '../priority'
 import type { KanbanCardSummary } from '../types'
 import { useBoardLabels, useDeleteCard } from '../hooks'
+import { CardDependencies } from './CardDependencies'
 
 const STALE_DAYS = 7
 
@@ -50,6 +51,7 @@ export function KanbanCardPreview({
   const cardLabels = (labels ?? []).filter((l) => card.labelIds.includes(l.id))
   const overdue = isOverdue(card.due_date)
   const isStale = Date.now() - new Date(card.updated_at).getTime() > STALE_DAYS * 24 * 60 * 60 * 1000
+  const daysInColumn = Math.floor((Date.now() - new Date(card.column_entered_at).getTime()) / (24 * 60 * 60 * 1000))
 
   return (
     <Card
@@ -114,6 +116,13 @@ export function KanbanCardPreview({
             {new Date(card.due_date).toLocaleDateString('uk-UA')}
           </span>
         )}
+        {daysInColumn >= 1 && (
+          <span className="flex items-center gap-1">
+            <Hourglass className="h-3 w-3" />
+            {daysInColumn} {t.kanban.cardAgeSuffix}
+          </span>
+        )}
+        <CardDependencies card={card} boardId={boardId} />
       </div>
 
       <div className="flex items-center gap-2 text-xs text-muted-foreground">

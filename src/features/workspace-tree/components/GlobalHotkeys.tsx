@@ -16,11 +16,18 @@ export function GlobalHotkeys() {
   const { data: items } = useWorkspaceItems()
   const createItem = useCreateItem()
   const setPendingRenameItemId = useUiStore((s) => s.setPendingRenameItemId)
+  const setQuickCaptureOpen = useUiStore((s) => s.setQuickCaptureOpen)
   const navigate = useNavigate()
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (!(event.metaKey || event.ctrlKey)) return
+
+      if (event.shiftKey && event.key.toLowerCase() === 'i') {
+        event.preventDefault()
+        setQuickCaptureOpen(true)
+        return
+      }
 
       if (event.key.toLowerCase() === 'n') {
         event.preventDefault()

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Archive, CalendarCheck, Clock4, Home, Plus, Settings, Star, Tags } from 'lucide-react'
+import { Archive, CalendarCheck, Clock4, Home, Inbox, Plus, Settings, Star, Tags } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -55,6 +55,10 @@ export function SidebarContent({ onNavigate, collapsed = false }: SidebarContent
         <NavLink to="/app/favorites" className={navLinkClass(collapsed)} onClick={onNavigate} title={collapsed ? t.nav.favorites : undefined}>
           <Star className="h-4 w-4 shrink-0" />
           {!collapsed && t.nav.favorites}
+        </NavLink>
+        <NavLink to="/app/inbox" className={navLinkClass(collapsed)} onClick={onNavigate} title={collapsed ? t.nav.inbox : undefined}>
+          <Inbox className="h-4 w-4 shrink-0" />
+          {!collapsed && t.nav.inbox}
         </NavLink>
         <NavLink to="/app/archive" className={navLinkClass(collapsed)} onClick={onNavigate} title={collapsed ? t.nav.archive : undefined}>
           <Archive className="h-4 w-4 shrink-0" />

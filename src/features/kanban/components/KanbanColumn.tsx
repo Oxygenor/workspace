@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Archive, CheckCircle2, GripVertical, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
+import { Archive, CheckCircle2, GripVertical, LayoutTemplate, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils'
 import { t } from '@/i18n'
 import { COLUMN_COLORS } from '@/lib/validations/kanban'
 import { nextAppendPosition } from '@/lib/position'
+import { useCreateFromCardTemplate, useTemplates } from '@/features/templates/hooks'
 import type { KanbanColumnRow } from '@/types/database'
 import type { KanbanCardSummary } from '../types'
 import {
@@ -62,6 +63,8 @@ export function KanbanColumn({
   const archiveColumn = useArchiveColumn(boardId)
   const deleteColumn = useDeleteColumn(boardId)
   const createCard = useCreateCard(boardId)
+  const { data: cardTemplates } = useTemplates('card')
+  const createFromCardTemplate = useCreateFromCardTemplate(boardId)
 
   const [isEditingName, setIsEditingName] = useState(false)
   const [draftName, setDraftName] = useState(column.name)
@@ -310,10 +313,38 @@ export function KanbanColumn({
             />
           </div>
         ) : (
-          <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => setIsAddingCard(true)}>
-            <Plus className="h-3.5 w-3.5" />
-            {t.kanban.addCard}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" className="flex-1 justify-start" onClick={() => setIsAddingCard(true)}>
+              <Plus className="h-3.5 w-3.5" />
+              {t.kanban.addCard}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" title={t.templates.createFromTemplate}>
+                  <LayoutTemplate className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {(cardTemplates?.length ?? 0) === 0 && (
+                  <DropdownMenuItem disabled>{t.templates.noCardTemplates}</DropdownMenuItem>
+                )}
+                {cardTemplates?.map((template) => (
+                  <DropdownMenuItem
+                    key={template.id}
+                    onSelect={() =>
+                      createFromCardTemplate.mutate({
+                        template,
+                        columnId: column.id,
+                        position: nextAppendPosition(cards),
+                      })
+                    }
+                  >
+                    {template.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )}
       </div>
 

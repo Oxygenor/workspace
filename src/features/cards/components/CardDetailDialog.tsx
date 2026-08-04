@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Archive, Loader2, MoreHorizontal, Trash2 } from 'lucide-react'
+import { Archive, LayoutTemplate, Loader2, MoreHorizontal, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -38,8 +38,10 @@ import { PRIORITY_LABELS, PRIORITY_ORDER } from '@/features/kanban/priority'
 import { useCurrentWorkspace, useWorkspaceMembers } from '@/features/workspace/hooks'
 import { TagPicker } from '@/features/tags/components/TagPicker'
 import { TimeTrackingSection } from '@/features/time/components/TimeTrackingSection'
+import { SaveTemplateDialog } from '@/features/templates/components/SaveTemplateDialog'
+import { useSaveCardAsTemplate } from '@/features/templates/hooks'
 import type { PriorityLevel } from '@/types/database'
-import { useCard, useUpdateCard } from '../hooks'
+import { useCard, useCardLabelIds, useChecklistItems, useUpdateCard } from '../hooks'
 import { AttachmentsSection } from './AttachmentsSection'
 import { ChecklistSection } from './ChecklistSection'
 import { CommentsSection } from './CommentsSection'
@@ -69,10 +71,14 @@ export function CardDetailDialog({ cardId, boardId, open, onOpenChange }: CardDe
   const updateCard = useUpdateCard(cardId, boardId)
   const archiveCard = useArchiveCard(boardId)
   const deleteCard = useDeleteCard(boardId)
+  const { data: checklistItems } = useChecklistItems(cardId)
+  const { data: cardLabelIds } = useCardLabelIds(cardId)
+  const saveCardAsTemplate = useSaveCardAsTemplate()
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
 
   useEffect(() => {
     if (card) {
@@ -129,6 +135,10 @@ export function CardDetailDialog({ cardId, boardId, open, onOpenChange }: CardDe
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => setSaveTemplateOpen(true)}>
+                        <LayoutTemplate />
+                        {t.templates.saveAsTemplate}
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onSelect={() => archiveCard.mutate(cardId, { onSuccess: () => onOpenChange(false) })}
                       >
@@ -312,6 +322,30 @@ export function CardDetailDialog({ cardId, boardId, open, onOpenChange }: CardDe
         confirmLabel={t.common.delete}
         onConfirm={() => deleteCard.mutate(cardId, { onSuccess: () => onOpenChange(false) })}
       />
+
+      {card && (
+        <SaveTemplateDialog
+          open={saveTemplateOpen}
+          onOpenChange={setSaveTemplateOpen}
+          title={t.templates.saveCardTitle}
+          defaultName={card.title}
+          isSaving={saveCardAsTemplate.isPending}
+          onSave={(name) => {
+            saveCardAsTemplate.mutate(
+              {
+                name,
+                payload: {
+                  title: card.title,
+                  checklistItems: (checklistItems ?? []).map((item) => item.title),
+                  labelIds: cardLabelIds ?? [],
+                  priority: card.priority,
+                },
+              },
+              { onSuccess: () => setSaveTemplateOpen(false) },
+            )
+          }}
+        />
+      )}
     </Dialog>
   )
 }

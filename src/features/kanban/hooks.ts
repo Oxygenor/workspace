@@ -7,6 +7,7 @@ import { t } from '@/i18n'
 import type { KanbanColumnRow } from '@/types/database'
 import type { KanbanCardSummary } from './types'
 import {
+  addCardDependency,
   archiveCard,
   archiveColumn,
   createCard,
@@ -16,9 +17,11 @@ import {
   deleteColumn,
   deleteLabel,
   fetchBoardLabels,
+  fetchCardDependencies,
   fetchColumns,
   fetchKanbanCards,
   moveCard,
+  removeCardDependency,
   renameColumn,
   reorderCard,
   reorderColumn,
@@ -248,6 +251,30 @@ export function useCreateLabel(boardId: string) {
   return useMutation({
     mutationFn: ({ name, color }: { name: string; color: string }) => createLabel(boardId, name, color),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.boardLabels(boardId) }),
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+export function useCardDependencies(boardId: string) {
+  return useQuery({ queryKey: queryKeys.cardDependencies(boardId), queryFn: () => fetchCardDependencies(boardId) })
+}
+
+export function useAddCardDependency(boardId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ cardId, dependsOnCardId }: { cardId: string; dependsOnCardId: string }) =>
+      addCardDependency(cardId, dependsOnCardId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.cardDependencies(boardId) }),
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+export function useRemoveCardDependency(boardId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ cardId, dependsOnCardId }: { cardId: string; dependsOnCardId: string }) =>
+      removeCardDependency(cardId, dependsOnCardId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.cardDependencies(boardId) }),
     onError: (error: Error) => toast.error(error.message),
   })
 }

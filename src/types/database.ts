@@ -93,6 +93,13 @@ export interface CardLabelRow {
   label_id: string
 }
 
+export interface CardDependencyRow {
+  id: string
+  card_id: string
+  depends_on_card_id: string
+  created_at: string
+}
+
 export interface ChecklistItemRow extends Timestamped {
   id: string
   card_id: string
@@ -240,7 +247,7 @@ export interface NoteLinkRow {
   created_at: string
 }
 
-export type TemplateKind = 'section' | 'checklist'
+export type TemplateKind = 'section' | 'checklist' | 'card'
 
 export interface TemplateRow {
   id: string
@@ -275,6 +282,16 @@ export interface UserScheduleSettingsRow extends Timestamped {
   timezone: string
   idle_nudge_enabled: boolean
   last_idle_nudge_at: string | null
+  idle_nudge_paused_until: string | null
+  pomodoro_break_until: string | null
+}
+
+export interface InboxItemRow {
+  id: string
+  user_id: string
+  text: string
+  created_at: string
+  archived_at: string | null
 }
 
 export interface UserDayOffRow {
