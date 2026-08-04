@@ -133,6 +133,16 @@ export async function updateColumnAutoArchive(
   return throwIfError(result, 'Не вдалося оновити налаштування автоархівації.')
 }
 
+export async function updateColumnInProgress(columnId: string, isInProgressColumn: boolean): Promise<KanbanColumnRow> {
+  const result = await supabase
+    .from('kanban_columns')
+    .update({ is_in_progress_column: isInProgressColumn })
+    .eq('id', columnId)
+    .select('*')
+    .single()
+  return throwIfError(result, 'Не вдалося оновити налаштування колонки.')
+}
+
 export async function reorderColumn(columnId: string, position: number): Promise<void> {
   const { error } = await supabase.from('kanban_columns').update({ position }).eq('id', columnId)
   if (error) throw toAppError(error, 'Не вдалося змінити порядок колонок.')

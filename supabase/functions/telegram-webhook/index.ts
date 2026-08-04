@@ -7,6 +7,9 @@
 //     src/features/integrations/api.ts, then sends it to their own bot).
 //   - `/today` — sends the digest on demand (same content as the scheduled
 //     telegram-digest run, via the shared `_shared/digest.ts` builder).
+//   - `/board` — sends every active card (with or without a due date) from
+//     boards opted in via their "notifyAllCardsToBot" setting, grouped by
+//     board and column, via the shared `_shared/board-digest.ts` builder.
 //   - `/pause <minutes>` — silences idle-nudge for N minutes (default 60)
 //     without touching the idle_nudge_enabled toggle.
 //   - anything else (no leading `/`) — quick-capture: stored as an
@@ -18,6 +21,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
 import { sendTelegramMessage } from '../_shared/telegram.ts'
 import { buildDigestForUser, formatDigestMessage } from '../_shared/digest.ts'
+import { buildBoardDigestForUser, formatBoardDigestMessages } from '../_shared/board-digest.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -91,6 +95,21 @@ async function handleToday(chatId: number, userId: string): Promise<void> {
   await sendTelegramMessage(String(chatId), message ?? '🎉 Нічого прострочено чи на сьогодні немає.')
 }
 
+async function handleBoard(chatId: number, userId: string): Promise<void> {
+  const boards = await buildBoardDigestForUser(supabase, userId)
+  const messages = formatBoardDigestMessages(boards)
+  if (messages.length === 0) {
+    await sendTelegramMessage(
+      String(chatId),
+      'Немає жодної дошки, увімкненої для розсилки, або на них немає активних карток. Увімкніть опцію в налаштуваннях потрібної дошки в застосунку.',
+    )
+    return
+  }
+  for (const message of messages) {
+    await sendTelegramMessage(String(chatId), message)
+  }
+}
+
 async function handlePause(chatId: number, userId: string, minutesRaw: string | undefined): Promise<void> {
   const minutes = minutesRaw ? Number.parseInt(minutesRaw, 10) : DEFAULT_PAUSE_MINUTES
   const pausedUntil = new Date(Date.now() + minutes * 60 * 1000)
@@ -157,6 +176,11 @@ Deno.serve(async (req) => {
 
     if (text === '/today') {
       await handleToday(chatId, userId)
+      return jsonOk()
+    }
+
+    if (text === '/board') {
+      await handleBoard(chatId, userId)
       return jsonOk()
     }
 

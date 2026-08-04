@@ -512,6 +512,15 @@ export const uk = {
     badgeTooltipPrefix: 'Автоархівація карток через',
     badgeTooltipSuffix: 'дн.',
   },
+  inProgressColumn: {
+    settingsTitle: 'Колонка "В роботі"',
+    enable: 'Зупиняти таймер при переміщенні',
+    description: 'Коли картку переміщують у цю колонку, її запущений таймер обліку часу автоматично зупиняється.',
+    badgeTooltip: 'Переміщення сюди зупиняє таймер картки',
+  },
+  botDigestBoard: {
+    enable: 'Надсилати картки в бота (команда /board)',
+  },
   undo: {
     actionLabel: 'Скасувати',
     archived: 'Архівовано',

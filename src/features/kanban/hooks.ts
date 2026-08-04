@@ -29,6 +29,7 @@ import {
   restoreColumn,
   updateColumnAutoArchive,
   updateColumnColor,
+  updateColumnInProgress,
   updateColumnWipLimit,
 } from './api'
 
@@ -93,6 +94,16 @@ export function useUpdateColumnAutoArchive(boardId: string) {
       isDoneColumn: boolean
       autoArchiveDays: number
     }) => updateColumnAutoArchive(columnId, isDoneColumn, autoArchiveDays),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) }),
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+export function useUpdateColumnInProgress(boardId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ columnId, isInProgressColumn }: { columnId: string; isInProgressColumn: boolean }) =>
+      updateColumnInProgress(columnId, isInProgressColumn),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) }),
     onError: (error: Error) => toast.error(error.message),
   })
@@ -209,7 +220,17 @@ export function useMoveCard(boardId: string) {
       if (context?.previous) queryClient.setQueryData(key, context.previous)
       toast.error(error.message)
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: key })
+      // Moving a card into an "in progress" column may have stopped its running
+      // timer server-side (move_kanban_card RPC) — refresh timer state too.
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0]
+          return key === 'running-timer' || key === 'time-entries' || key === 'time-entries-total'
+        },
+      })
+    },
   })
 }
 

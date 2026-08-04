@@ -60,6 +60,7 @@ export interface KanbanColumnRow extends Timestamped {
   wip_limit: number | null
   is_done_column: boolean
   auto_archive_days: number
+  is_in_progress_column: boolean
   archived_at: string | null
 }
 

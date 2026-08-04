@@ -4,10 +4,13 @@ This directory contains Deno Edge Functions that back three Workspace
 features:
 
 - **Telegram daily digest bot** — `telegram-webhook` (handles the one-time
-  account-linking handshake, plus `/today`, `/pause <minutes>`, and
-  plain-text quick capture) + `telegram-digest` (sends the daily "Мій
+  account-linking handshake, plus `/today`, `/board`, `/pause <minutes>`,
+  and plain-text quick capture) + `telegram-digest` (sends the daily "Мій
   день" message, meant to run on a schedule). Both share the digest-building
-  logic in `_shared/digest.ts`.
+  logic in `_shared/digest.ts`; `/board` additionally uses
+  `_shared/board-digest.ts` to send every active card (with or without a
+  due date) from boards opted in via the board's "notifyAllCardsToBot"
+  setting.
 - **Idle-card nudge** — `idle-nudge` (checks every ~10 minutes whether the
   user has no running card/task timer during their configured work hours
   and pings them on Telegram if so; respects `user_schedule_settings` /
@@ -56,6 +59,9 @@ Once linked (`/start <code>`), the bot understands:
 
 - `/today` — sends the digest on demand (same content as the scheduled
   morning/evening run).
+- `/board` — sends every active card, with or without a due date, from
+  boards you've opted in to (toggle "Надсилати картки в бота" in a board's
+  header in the app), grouped by board and column.
 - `/pause` or `/pause <minutes>` — silences idle-nudge for that many minutes
   (default 60) without disabling it entirely.
 - Anything else (no leading `/`) is treated as a quick capture — stored as

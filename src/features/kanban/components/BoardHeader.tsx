@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { useUpdateItemSettings } from '@/features/workspace-tree/hooks'
 import { useKanbanFiltersStore } from '@/stores/kanban-filters-store'
 import { t } from '@/i18n'
@@ -32,6 +33,7 @@ export function BoardHeader({ item, selectMode, onToggleSelectMode }: BoardHeade
   const description = typeof item.settings.description === 'string' ? item.settings.description : ''
   const [isEditingDescription, setIsEditingDescription] = useState(false)
   const [draftDescription, setDraftDescription] = useState(description)
+  const notifyAllCardsToBot = item.settings.notifyAllCardsToBot === true
 
   function commitDescription() {
     setIsEditingDescription(false)
@@ -62,6 +64,16 @@ export function BoardHeader({ item, selectMode, onToggleSelectMode }: BoardHeade
           {description || `${t.common.description} (${t.common.optional})`}
         </p>
       )}
+
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm text-muted-foreground">{t.botDigestBoard.enable}</span>
+        <Switch
+          checked={notifyAllCardsToBot}
+          onCheckedChange={(checked) =>
+            updateSettings.mutate({ itemId: item.id, settings: { ...item.settings, notifyAllCardsToBot: checked } })
+          }
+        />
+      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-48">
