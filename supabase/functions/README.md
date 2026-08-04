@@ -15,6 +15,12 @@ features:
   user has no running card/task timer during their configured work hours
   and pings them on Telegram if so; respects `user_schedule_settings` /
   `user_days_off`, see `supabase/migrations/0012_idle_nudge_and_days_off.sql`).
+- **Daily card reset** — `card-reset` (checks every ~10 minutes; at the
+  start of each user's work day, sweeps every card sitting in an
+  "in-progress"-flagged column back to that board's "reset target" column,
+  so nothing silently sits in progress from a day you forgot to close it
+  out; sends a Telegram summary if you have it linked. See
+  `supabase/migrations/0019_reset_in_progress_cards.sql`).
 - **Weekly summary** — `weekly-summary` (once a week: hours tracked, cards
   closed, longest-untouched open card).
 - **ICS calendar feed** — `ics-feed` (a public, token-protected endpoint you
@@ -87,6 +93,7 @@ JWT:
 supabase functions deploy telegram-webhook --no-verify-jwt
 supabase functions deploy telegram-digest --no-verify-jwt
 supabase functions deploy idle-nudge --no-verify-jwt
+supabase functions deploy card-reset --no-verify-jwt
 supabase functions deploy weekly-summary --no-verify-jwt
 supabase functions deploy ics-feed --no-verify-jwt
 ```
@@ -210,6 +217,30 @@ select cron.schedule(
 
 Unschedule with `select cron.unschedule('idle-nudge-check');` if you ever
 want to turn this off without disabling `idle_nudge_enabled` per user.
+
+## 6b2. Schedule the card-reset check (pg_cron + pg_net)
+
+Same 10-minute cadence as idle-nudge, so the "start of workday" window is
+checked with reasonable precision:
+
+```sql
+select cron.schedule(
+  'card-reset-check',
+  '*/10 * * * *',
+  $$
+  select net.http_post(
+    url := 'https://<project-ref>.supabase.co/functions/v1/card-reset', -- REPLACE WITH YOUR VALUES
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer <SUPABASE_SERVICE_ROLE_OR_ANON_KEY>' -- REPLACE WITH YOUR VALUES
+    ),
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
+
+Unschedule with `select cron.unschedule('card-reset-check');`.
 
 ## 6c. Schedule the weekly summary (pg_cron + pg_net)
 

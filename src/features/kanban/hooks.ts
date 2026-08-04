@@ -30,6 +30,7 @@ import {
   updateColumnAutoArchive,
   updateColumnColor,
   updateColumnInProgress,
+  updateColumnResetTarget,
   updateColumnWipLimit,
 } from './api'
 
@@ -104,6 +105,16 @@ export function useUpdateColumnInProgress(boardId: string) {
   return useMutation({
     mutationFn: ({ columnId, isInProgressColumn }: { columnId: string; isInProgressColumn: boolean }) =>
       updateColumnInProgress(columnId, isInProgressColumn),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) }),
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+export function useUpdateColumnResetTarget(boardId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ columnId, isResetTargetColumn }: { columnId: string; isResetTargetColumn: boolean }) =>
+      updateColumnResetTarget(columnId, isResetTargetColumn),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) }),
     onError: (error: Error) => toast.error(error.message),
   })

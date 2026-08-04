@@ -143,6 +143,16 @@ export async function updateColumnInProgress(columnId: string, isInProgressColum
   return throwIfError(result, 'Не вдалося оновити налаштування колонки.')
 }
 
+export async function updateColumnResetTarget(columnId: string, isResetTargetColumn: boolean): Promise<KanbanColumnRow> {
+  const result = await supabase
+    .from('kanban_columns')
+    .update({ is_reset_target_column: isResetTargetColumn })
+    .eq('id', columnId)
+    .select('*')
+    .single()
+  return throwIfError(result, 'Не вдалося оновити налаштування колонки.')
+}
+
 export async function reorderColumn(columnId: string, position: number): Promise<void> {
   const { error } = await supabase.from('kanban_columns').update({ position }).eq('id', columnId)
   if (error) throw toAppError(error, 'Не вдалося змінити порядок колонок.')

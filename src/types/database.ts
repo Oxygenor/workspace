@@ -61,6 +61,7 @@ export interface KanbanColumnRow extends Timestamped {
   is_done_column: boolean
   auto_archive_days: number
   is_in_progress_column: boolean
+  is_reset_target_column: boolean
   archived_at: string | null
 }
 
@@ -285,6 +286,7 @@ export interface UserScheduleSettingsRow extends Timestamped {
   last_idle_nudge_at: string | null
   idle_nudge_paused_until: string | null
   pomodoro_break_until: string | null
+  last_card_reset_at: string | null
 }
 
 export interface InboxItemRow {
