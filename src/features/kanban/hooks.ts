@@ -233,8 +233,8 @@ export function useMoveCard(boardId: string) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: key })
-      // Moving a card into an "in progress" column may have stopped its running
-      // timer server-side (move_kanban_card RPC) — refresh timer state too.
+      // Moving a card may have started/stopped a running timer server-side
+      // (move_kanban_card RPC, for in-progress/done columns) — refresh timer state too.
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0]
