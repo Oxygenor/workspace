@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 import { queryKeys } from '@/lib/query/keys'
-import { fetchMyDay, fetchUpcomingDeadlines, toggleTaskCompleted } from './api'
+import { fetchBoardOverview, fetchMyDay, fetchUpcomingDeadlines, toggleTaskCompleted } from './api'
 
 const MY_DAY_KEY = ['home', 'my-day']
 
@@ -12,6 +12,10 @@ export function useMyDay() {
 
 export function useUpcomingDeadlines() {
   return useQuery({ queryKey: ['home', 'upcoming-deadlines'], queryFn: () => fetchUpcomingDeadlines() })
+}
+
+export function useBoardOverview() {
+  return useQuery({ queryKey: ['home', 'board-overview'], queryFn: fetchBoardOverview })
 }
 
 export function useToggleTaskCompleted() {

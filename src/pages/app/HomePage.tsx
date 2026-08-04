@@ -1,5 +1,16 @@
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, CalendarClock, CalendarDays, FolderKanban, Pin, Plus, Star } from 'lucide-react'
+import {
+  AlertTriangle,
+  CalendarClock,
+  CalendarDays,
+  CheckCircle2,
+  FolderKanban,
+  Inbox,
+  Pin,
+  Plus,
+  Star,
+  Timer,
+} from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,8 +24,8 @@ import { useFavorites } from '@/features/favorites/hooks'
 import { useCreateItem, useWorkspaceItems } from '@/features/workspace-tree/hooks'
 import { CreateItemMenu } from '@/features/workspace-tree/components/CreateItemMenu'
 import { nextAppendPosition } from '@/features/workspace-tree/tree-utils'
-import { useMyDay, useToggleTaskCompleted, useUpcomingDeadlines } from '@/features/home/hooks'
-import type { DeadlineEntry } from '@/features/home/api'
+import { useBoardOverview, useMyDay, useToggleTaskCompleted, useUpcomingDeadlines } from '@/features/home/hooks'
+import type { BoardOverviewCard, DeadlineEntry } from '@/features/home/api'
 import { usePinnedNotes } from '@/features/notes/hooks'
 import { useUiStore } from '@/stores/ui-store'
 import { Button } from '@/components/ui/button'
@@ -37,6 +48,7 @@ export default function HomePage() {
   const { data: favorites } = useFavorites()
   const { data: myDay, isLoading: myDayLoading } = useMyDay()
   const { data: upcomingDeadlines, isLoading: upcomingLoading } = useUpcomingDeadlines()
+  const { data: boardOverview, isLoading: boardOverviewLoading } = useBoardOverview()
   const { data: pinnedNotes } = usePinnedNotes()
   const toggleTaskCompleted = useToggleTaskCompleted()
   const navigate = useNavigate()
@@ -54,6 +66,10 @@ export default function HomePage() {
   const activeProjectsCount = (items ?? []).filter((i) => i.type === 'kanban').length
   const overdue = myDay?.overdue ?? []
   const today = myDay?.today ?? []
+  const boardNameById = new Map((items ?? []).map((i) => [i.id, i.name]))
+  const inProgressCards = boardOverview?.inProgress ?? []
+  const inboxCards = boardOverview?.inbox ?? []
+  const completedToday = boardOverview?.completedToday ?? 0
 
   function handleQuickCreate(type: Parameters<typeof createItem.mutate>[0]['type']) {
     const rootSiblings = (items ?? []).filter((i) => i.parent_id === null)
@@ -94,6 +110,21 @@ export default function HomePage() {
     )
   }
 
+  function renderBoardCard(card: BoardOverviewCard) {
+    return (
+      <button
+        key={card.id}
+        onClick={() => navigate(`/app/item/${card.boardId}`)}
+        className="flex w-full items-center gap-2 rounded-md p-2 text-left text-sm hover:bg-accent"
+      >
+        <span className="flex-1 truncate">{card.title}</span>
+        <Badge variant="outline" className="shrink-0">
+          {boardNameById.get(card.boardId) ?? ''}
+        </Badge>
+      </button>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -111,7 +142,7 @@ export default function HomePage() {
         </CreateItemMenu>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
@@ -145,6 +176,17 @@ export default function HomePage() {
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
+              <CheckCircle2 className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-2xl font-semibold text-foreground">{boardOverviewLoading ? '—' : completedToday}</p>
+              <p className="text-xs text-muted-foreground">{t.home.completedToday}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -169,6 +211,39 @@ export default function HomePage() {
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t.home.todaySection}</p>
               {today.map((entry) => renderEntry(entry, 'today'))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FolderKanban className="h-4 w-4" />
+            {t.home.boardOverview}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {boardOverviewLoading && <Skeleton className="h-10 w-full" />}
+          {!boardOverviewLoading && inProgressCards.length === 0 && inboxCards.length === 0 && (
+            <p className="text-sm text-muted-foreground">{t.home.boardOverviewEmpty}</p>
+          )}
+          {inProgressCards.length > 0 && (
+            <div className="space-y-1">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <Timer className="h-3.5 w-3.5" />
+                {t.home.inProgressSection}
+              </p>
+              {inProgressCards.map(renderBoardCard)}
+            </div>
+          )}
+          {inboxCards.length > 0 && (
+            <div className="space-y-1">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <Inbox className="h-3.5 w-3.5" />
+                {t.home.inboxSection}
+              </p>
+              {inboxCards.map(renderBoardCard)}
             </div>
           )}
         </CardContent>

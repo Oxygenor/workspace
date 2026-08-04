@@ -114,6 +114,11 @@ export const uk = {
     quickCreate: 'Швидке створення',
     noData: 'Поки що немає даних',
     myDayEmpty: 'На сьогодні нічого не заплановано',
+    completedToday: 'Завершено сьогодні',
+    boardOverview: 'Огляд дошок',
+    inProgressSection: 'У роботі',
+    inboxSection: 'Вхідні',
+    boardOverviewEmpty: 'Немає карток у "В роботі" чи "Вхідних" на жодній дошці',
   },
   kanban: {
     addColumn: 'Додати колонку',

@@ -118,3 +118,66 @@ export async function toggleTaskCompleted(taskId: string, completed: boolean): P
   const { error } = await supabase.from('tasks').update({ completed }).eq('id', taskId)
   if (error) throw toAppError(error, 'Не вдалося оновити завдання.')
 }
+
+export interface BoardOverviewCard {
+  id: string
+  boardId: string
+  title: string
+  due_date: string | null
+}
+
+export interface BoardOverview {
+  inProgress: BoardOverviewCard[]
+  inbox: BoardOverviewCard[]
+  completedToday: number
+}
+
+async function fetchCardsForFlaggedColumns(
+  columns: { id: string; is_in_progress_column: boolean; is_reset_target_column: boolean }[],
+  flag: 'is_in_progress_column' | 'is_reset_target_column',
+): Promise<BoardOverviewCard[]> {
+  const columnIds = columns.filter((c) => c[flag]).map((c) => c.id)
+  if (columnIds.length === 0) return []
+
+  const result = await supabase
+    .from('kanban_cards')
+    .select('id, board_id, title, due_date')
+    .in('column_id', columnIds)
+    .is('archived_at', null)
+    .order('position', { ascending: true })
+  const cards = throwIfError(result, 'Не вдалося завантажити картки дошок.')
+
+  return cards.map((c) => ({ id: c.id, boardId: c.board_id, title: c.title, due_date: c.due_date }))
+}
+
+/** Cross-board snapshot: cards sitting in "in progress" / "reset target" columns, plus how many were completed (moved to a done column) today. */
+export async function fetchBoardOverview(): Promise<BoardOverview> {
+  const columnsResult = await supabase
+    .from('kanban_columns')
+    .select('id, is_in_progress_column, is_reset_target_column, is_done_column')
+    .is('archived_at', null)
+    .or('is_in_progress_column.eq.true,is_reset_target_column.eq.true,is_done_column.eq.true')
+  const columns = throwIfError(columnsResult, 'Не вдалося завантажити колонки дошок.')
+
+  const doneColumnIds = columns.filter((c) => c.is_done_column).map((c) => c.id)
+  const todayStart = startOfToday()
+
+  const [inProgress, inbox, completedToday] = await Promise.all([
+    fetchCardsForFlaggedColumns(columns, 'is_in_progress_column'),
+    fetchCardsForFlaggedColumns(columns, 'is_reset_target_column'),
+    doneColumnIds.length === 0
+      ? Promise.resolve(0)
+      : supabase
+          .from('kanban_cards')
+          .select('id', { count: 'exact', head: true })
+          .in('column_id', doneColumnIds)
+          .is('archived_at', null)
+          .gte('column_entered_at', todayStart.toISOString())
+          .then((res) => {
+            if (res.error) throw toAppError(res.error, 'Не вдалося порахувати завершені картки.')
+            return res.count ?? 0
+          }),
+  ])
+
+  return { inProgress, inbox, completedToday }
+}
