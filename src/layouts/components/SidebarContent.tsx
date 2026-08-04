@@ -9,6 +9,7 @@ import { WorkspaceTree } from '@/features/workspace-tree/components/WorkspaceTre
 import { useCreateItem, useWorkspaceItems } from '@/features/workspace-tree/hooks'
 import { nextAppendPosition } from '@/features/workspace-tree/tree-utils'
 import { useCreateFromSectionTemplate } from '@/features/templates/hooks'
+import { useInboxItems } from '@/features/inbox/hooks'
 import { useUiStore } from '@/stores/ui-store'
 import { t } from '@/i18n'
 
@@ -31,6 +32,8 @@ export function SidebarContent({ onNavigate, collapsed = false }: SidebarContent
   const createFromTemplate = useCreateFromSectionTemplate()
   const setPendingRenameItemId = useUiStore((s) => s.setPendingRenameItemId)
   const { data: items } = useWorkspaceItems()
+  const { data: inboxItems } = useInboxItems()
+  const inboxCount = inboxItems?.length ?? 0
 
   function handleCreateRoot(type: Parameters<typeof createItem.mutate>[0]['type']) {
     const rootSiblings = (items ?? []).filter((item) => item.parent_id === null)
@@ -57,8 +60,22 @@ export function SidebarContent({ onNavigate, collapsed = false }: SidebarContent
           {!collapsed && t.nav.favorites}
         </NavLink>
         <NavLink to="/app/inbox" className={navLinkClass(collapsed)} onClick={onNavigate} title={collapsed ? t.nav.inbox : undefined}>
-          <Inbox className="h-4 w-4 shrink-0" />
-          {!collapsed && t.nav.inbox}
+          <span className="relative shrink-0">
+            <Inbox className="h-4 w-4" />
+            {collapsed && inboxCount > 0 && (
+              <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive" />
+            )}
+          </span>
+          {!collapsed && (
+            <span className="flex flex-1 items-center justify-between">
+              <span>{t.nav.inbox}</span>
+              {inboxCount > 0 && (
+                <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-destructive-foreground">
+                  {inboxCount > 99 ? '99+' : inboxCount}
+                </span>
+              )}
+            </span>
+          )}
         </NavLink>
         <NavLink to="/app/archive" className={navLinkClass(collapsed)} onClick={onNavigate} title={collapsed ? t.nav.archive : undefined}>
           <Archive className="h-4 w-4 shrink-0" />
