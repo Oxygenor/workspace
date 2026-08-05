@@ -105,7 +105,10 @@ export function useUpdateColumnInProgress(boardId: string) {
   return useMutation({
     mutationFn: ({ columnId, isInProgressColumn }: { columnId: string; isInProgressColumn: boolean }) =>
       updateColumnInProgress(columnId, isInProgressColumn),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) })
+      queryClient.invalidateQueries({ queryKey: ['home', 'board-overview'] })
+    },
     onError: (error: Error) => toast.error(error.message),
   })
 }
@@ -115,7 +118,10 @@ export function useUpdateColumnResetTarget(boardId: string) {
   return useMutation({
     mutationFn: ({ columnId, isResetTargetColumn }: { columnId: string; isResetTargetColumn: boolean }) =>
       updateColumnResetTarget(columnId, isResetTargetColumn),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) })
+      queryClient.invalidateQueries({ queryKey: ['home', 'board-overview'] })
+    },
     onError: (error: Error) => toast.error(error.message),
   })
 }
@@ -241,6 +247,9 @@ export function useMoveCard(boardId: string) {
           return key === 'running-timer' || key === 'time-entries' || key === 'time-entries-total'
         },
       })
+      // A card may have entered/left an in-progress or reset-target column —
+      // refresh the Home page's cross-board overview too.
+      queryClient.invalidateQueries({ queryKey: ['home', 'board-overview'] })
     },
   })
 }

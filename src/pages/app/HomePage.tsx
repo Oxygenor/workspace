@@ -225,26 +225,31 @@ export default function HomePage() {
         </CardHeader>
         <CardContent className="space-y-3">
           {boardOverviewLoading && <Skeleton className="h-10 w-full" />}
-          {!boardOverviewLoading && inProgressCards.length === 0 && inboxCards.length === 0 && (
-            <p className="text-sm text-muted-foreground">{t.home.boardOverviewEmpty}</p>
-          )}
-          {inProgressCards.length > 0 && (
-            <div className="space-y-1">
-              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <Timer className="h-3.5 w-3.5" />
-                {t.home.inProgressSection}
-              </p>
-              {inProgressCards.map(renderBoardCard)}
-            </div>
-          )}
-          {inboxCards.length > 0 && (
-            <div className="space-y-1">
-              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <Inbox className="h-3.5 w-3.5" />
-                {t.home.inboxSection}
-              </p>
-              {inboxCards.map(renderBoardCard)}
-            </div>
+          {!boardOverviewLoading && (
+            <>
+              <div className="space-y-1">
+                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Timer className="h-3.5 w-3.5" />
+                  {t.home.inProgressSection}
+                </p>
+                {inProgressCards.length > 0 ? (
+                  inProgressCards.map(renderBoardCard)
+                ) : (
+                  <p className="px-2 text-sm text-muted-foreground">{t.home.inProgressEmpty}</p>
+                )}
+              </div>
+              <div className="space-y-1">
+                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Inbox className="h-3.5 w-3.5" />
+                  {t.home.inboxSection}
+                </p>
+                {inboxCards.length > 0 ? (
+                  inboxCards.map(renderBoardCard)
+                ) : (
+                  <p className="px-2 text-sm text-muted-foreground">{t.home.inboxEmpty}</p>
+                )}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

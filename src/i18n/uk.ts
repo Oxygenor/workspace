@@ -118,7 +118,8 @@ export const uk = {
     boardOverview: 'Огляд дошок',
     inProgressSection: 'У роботі',
     inboxSection: 'Вхідні',
-    boardOverviewEmpty: 'Немає карток у "В роботі" чи "Вхідних" на жодній дошці',
+    inProgressEmpty: 'Немає карток у роботі',
+    inboxEmpty: 'Немає карток у вхідних',
   },
   kanban: {
     addColumn: 'Додати колонку',
