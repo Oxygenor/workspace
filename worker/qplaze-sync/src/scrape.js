@@ -136,6 +136,30 @@ async function extractCards(page) {
   return cards
 }
 
+// TEMPORARY, for fixing SELECTORS against the real instance — remove once
+// scraping works reliably. Deliberately returns raw page HTML (unlike every
+// other function in this file), so only reachable via a bearer-protected
+// debug route, never logged/stored anywhere.
+export async function dumpBoardHtml() {
+  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
+  try {
+    const page = await browser.newPage()
+    let stage = 'before-login'
+    try {
+      await login(page)
+      stage = 'after-login'
+    } catch (loginError) {
+      stage = `login-failed:${loginError instanceof SyncError ? loginError.code : 'unknown'}`
+    }
+    await page.goto(config.qplazeBoardUrl, { waitUntil: 'domcontentloaded', timeout: NAV_TIMEOUT_MS }).catch(() => {})
+    const html = await page.content()
+    const url = page.url()
+    return { stage, url, html }
+  } finally {
+    await browser.close().catch(() => {})
+  }
+}
+
 /** Returns `{ sourceId, title, sourceUrl }[]`. Throws a SyncError (never a raw error) on any failure mode. */
 export async function scrapeBoard() {
   let browser
