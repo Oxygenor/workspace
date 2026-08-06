@@ -1,0 +1,24 @@
+-- ============================================================
+-- Security fix: Postgres grants EXECUTE on new functions to
+-- PUBLIC by default, and Supabase's project bootstrap extends
+-- default privileges to anon/authenticated/service_role. Prior
+-- migrations' comments describing these `security definer`
+-- functions as "not granted to authenticated" described only the
+-- *absence* of an explicit GRANT — that is not the same as a
+-- REVOKE, and neither function had one. Confirmed exploitable:
+-- `reset_in_progress_cards(p_user_id uuid)` took an arbitrary
+-- caller-supplied user id with no check against auth.uid(), so
+-- anyone holding the (public, frontend-bundled) anon key could
+-- call it for any user id — no authentication required — and
+-- move that user's cards between columns. `archive_stale_done_cards()`
+-- has the same gap (lower severity: no caller-controlled target,
+-- but still meant to run only via pg_cron, not be publicly callable).
+--
+-- Both are only ever invoked via the service-role client (which
+-- bypasses grants entirely) — reset_in_progress_cards from
+-- supabase/functions/card-reset/index.ts, archive_stale_done_cards
+-- from the pg_cron job in 0011_column_auto_archive.sql — so
+-- revoking client-facing execute rights breaks nothing.
+-- ============================================================
+revoke execute on function public.reset_in_progress_cards(uuid) from public, anon, authenticated;
+revoke execute on function public.archive_stale_done_cards() from public, anon, authenticated;

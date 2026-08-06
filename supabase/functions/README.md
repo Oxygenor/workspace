@@ -25,6 +25,12 @@ features:
   closed, longest-untouched open card).
 - **ICS calendar feed** — `ics-feed` (a public, token-protected endpoint you
   subscribe to from Google Calendar / Apple Calendar / Outlook).
+- **Qplaze/Kanboard sync** — `qplaze-sync-trigger` bridges the authenticated
+  frontend (the "Синхронізувати Qplaze" board button) to a separate
+  Node/Playwright worker (`worker/qplaze-sync/`, deployed independently —
+  Edge Functions can't run a real browser) that scrapes cards from an
+  external Kanboard instance. See section 9 below and
+  `supabase/migrations/0023_qplaze_sync.sql`.
 
 None of this has been deployed yet — this README is the step-by-step guide
 to do so. It assumes you already applied the SQL migrations in
@@ -334,3 +340,50 @@ curl -X POST "https://<project-ref>.supabase.co/functions/v1/fetch-link-metadata
 ```
 
 Response looks like `{"title":"Example Domain","faviconUrl":"https://example.com/favicon.ico"}`.
+
+## 9. Qplaze/Kanboard sync — `qplaze-sync-trigger`
+
+Like `fetch-link-metadata` above, this one is called directly by our own
+authenticated frontend (the "Синхронізувати Qplaze" button in a board's
+header, shown only on boards with a column flagged for it) via
+`supabase.functions.invoke(...)` — so it must **not** be deployed with
+`--no-verify-jwt` either.
+
+Unlike every other function here, it doesn't do the real work itself: it
+resolves the caller's workspace, then forwards to a **separate Node/
+Playwright service** (`worker/qplaze-sync/`, its own `package.json`,
+deployed independently — see that directory's README for Railway deploy
+steps) that logs into the external Kanboard instance and scrapes cards.
+Supabase Edge Functions run on Deno and cannot launch a real browser, hence
+the separate service.
+
+Deploy the edge function normally (JWT verification on):
+
+```sh
+supabase functions deploy qplaze-sync-trigger
+```
+
+It needs two secrets — the worker's public URL and the shared bearer
+secret that authorizes calls to the worker's `POST /sync` (must match the
+worker's own `SYNC_API_KEY` env var exactly, see `worker/qplaze-sync/.env.example`):
+
+```sh
+supabase secrets set QPLAZE_WORKER_URL=https://your-worker.up.railway.app
+supabase secrets set QPLAZE_SYNC_API_KEY=<same value as the worker's SYNC_API_KEY>
+```
+
+The frontend never sees either secret — only this edge function does.
+
+To test manually (same caveat as `fetch-link-metadata`: use a real logged-in
+user's JWT):
+
+```sh
+curl -X POST "https://<project-ref>.supabase.co/functions/v1/qplaze-sync-trigger" \
+  -H "Authorization: Bearer <your-user-jwt>"
+```
+
+Response is `{"found":N,"created":N,"updated":N,"skipped":N,"error_code":null}`
+on success, or the same shape with `error_code` set to one of
+`login_failed | captcha_detected | structure_changed | lock_busy |
+no_target_column | internal` if the sync didn't complete — never a raw
+error message from the worker or Kanboard.

@@ -1,7 +1,18 @@
 import { useState } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Archive, CheckCircle2, GripVertical, Inbox, LayoutTemplate, MoreHorizontal, Plus, Timer, Trash2 } from 'lucide-react'
+import {
+  Archive,
+  CheckCircle2,
+  CloudDownload,
+  GripVertical,
+  Inbox,
+  LayoutTemplate,
+  MoreHorizontal,
+  Plus,
+  Timer,
+  Trash2,
+} from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,6 +44,7 @@ import {
   useUpdateColumnAutoArchive,
   useUpdateColumnColor,
   useUpdateColumnInProgress,
+  useUpdateColumnQplazeImport,
   useUpdateColumnResetTarget,
   useUpdateColumnWipLimit,
 } from '../hooks'
@@ -64,6 +76,7 @@ export function KanbanColumn({
   const updateAutoArchive = useUpdateColumnAutoArchive(boardId)
   const updateInProgress = useUpdateColumnInProgress(boardId)
   const updateResetTarget = useUpdateColumnResetTarget(boardId)
+  const updateQplazeImport = useUpdateColumnQplazeImport(boardId)
   const archiveColumn = useArchiveColumn(boardId)
   const deleteColumn = useDeleteColumn(boardId)
   const createCard = useCreateCard(boardId)
@@ -158,6 +171,11 @@ export function KanbanColumn({
         {column.is_reset_target_column && (
           <span className="shrink-0" title={t.resetTargetColumn.badgeTooltip}>
             <Inbox className="h-3.5 w-3.5 text-violet-500" />
+          </span>
+        )}
+        {column.is_qplaze_import_column && (
+          <span className="shrink-0" title={t.qplazeSync.badgeTooltip}>
+            <CloudDownload className="h-3.5 w-3.5 text-amber-500" />
           </span>
         )}
 
@@ -296,6 +314,23 @@ export function KanbanColumn({
                     />
                   </div>
                   <p className="px-1 text-xs text-muted-foreground">{t.resetTargetColumn.description}</p>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>{t.qplazeSync.settingsTitle}</DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent className="w-64 space-y-1 p-2">
+                  <div className="flex items-center justify-between gap-2 px-1">
+                    <span className="text-sm">{t.qplazeSync.enable}</span>
+                    <Switch
+                      checked={column.is_qplaze_import_column}
+                      onCheckedChange={(checked) =>
+                        updateQplazeImport.mutate({ columnId: column.id, isQplazeImportColumn: checked })
+                      }
+                    />
+                  </div>
+                  <p className="px-1 text-xs text-muted-foreground">{t.qplazeSync.description}</p>
                 </DropdownMenuSubContent>
               </DropdownMenuPortal>
             </DropdownMenuSub>

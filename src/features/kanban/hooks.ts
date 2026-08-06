@@ -27,9 +27,11 @@ import {
   reorderColumn,
   restoreCard,
   restoreColumn,
+  triggerQplazeSync,
   updateColumnAutoArchive,
   updateColumnColor,
   updateColumnInProgress,
+  updateColumnQplazeImport,
   updateColumnResetTarget,
   updateColumnWipLimit,
 } from './api'
@@ -122,6 +124,16 @@ export function useUpdateColumnResetTarget(boardId: string) {
       queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) })
       queryClient.invalidateQueries({ queryKey: ['home', 'board-overview'] })
     },
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+export function useUpdateColumnQplazeImport(boardId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ columnId, isQplazeImportColumn }: { columnId: string; isQplazeImportColumn: boolean }) =>
+      updateColumnQplazeImport(columnId, isQplazeImportColumn),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) }),
     onError: (error: Error) => toast.error(error.message),
   })
 }
@@ -326,6 +338,41 @@ export function useDeleteLabel(boardId: string) {
     mutationFn: (labelId: string) => deleteLabel(labelId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.boardLabels(boardId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.kanbanCards(boardId) })
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
+}
+
+function qplazeErrorMessage(errorCode: string): string {
+  switch (errorCode) {
+    case 'lock_busy':
+      return t.qplazeSync.errorLockBusy
+    case 'login_failed':
+      return t.qplazeSync.errorLoginFailed
+    case 'captcha_detected':
+      return t.qplazeSync.errorCaptchaDetected
+    case 'structure_changed':
+      return t.qplazeSync.errorStructureChanged
+    case 'no_target_column':
+      return t.qplazeSync.errorNoTargetColumn
+    default:
+      return t.qplazeSync.errorInternal
+  }
+}
+
+export function useTriggerQplazeSync(boardId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: triggerQplazeSync,
+    onSuccess: (result) => {
+      if (result.error_code) {
+        toast.error(qplazeErrorMessage(result.error_code))
+        return
+      }
+      toast.success(
+        `${t.qplazeSync.resultPrefix} ${t.qplazeSync.resultCreated} ${result.created}, ${t.qplazeSync.resultUpdated} ${result.updated}, ${t.qplazeSync.resultSkipped} ${result.skipped}`,
+      )
       queryClient.invalidateQueries({ queryKey: queryKeys.kanbanCards(boardId) })
     },
     onError: (error: Error) => toast.error(error.message),

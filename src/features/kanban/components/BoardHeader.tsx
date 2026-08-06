@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowDownAZ, CheckSquare, Search } from 'lucide-react'
+import { ArrowDownAZ, CheckSquare, CloudDownload, Search } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +15,7 @@ import { useUpdateItemSettings } from '@/features/workspace-tree/hooks'
 import { useKanbanFiltersStore } from '@/stores/kanban-filters-store'
 import { t } from '@/i18n'
 import type { WorkspaceItemRow } from '@/types/database'
+import { useColumns, useTriggerQplazeSync } from '../hooks'
 import { BoardFilters } from './BoardFilters'
 
 interface BoardHeaderProps {
@@ -29,6 +30,9 @@ export function BoardHeader({ item, selectMode, onToggleSelectMode }: BoardHeade
   const setSearch = useKanbanFiltersStore((s) => s.setSearch)
   const sort = useKanbanFiltersStore((s) => s.sortByBoard[item.id] ?? 'manual')
   const setSort = useKanbanFiltersStore((s) => s.setSort)
+  const { data: columns } = useColumns(item.id)
+  const triggerQplazeSync = useTriggerQplazeSync(item.id)
+  const hasQplazeImportColumn = (columns ?? []).some((c) => c.is_qplaze_import_column)
 
   const description = typeof item.settings.description === 'string' ? item.settings.description : ''
   const [isEditingDescription, setIsEditingDescription] = useState(false)
@@ -87,6 +91,19 @@ export function BoardHeader({ item, selectMode, onToggleSelectMode }: BoardHeade
         </div>
 
         <BoardFilters boardId={item.id} />
+
+        {hasQplazeImportColumn && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8"
+            disabled={triggerQplazeSync.isPending}
+            onClick={() => triggerQplazeSync.mutate()}
+          >
+            <CloudDownload className="h-3.5 w-3.5" />
+            {triggerQplazeSync.isPending ? t.qplazeSync.syncing : t.qplazeSync.syncButton}
+          </Button>
+        )}
 
         <Button
           variant={selectMode ? 'default' : 'outline'}

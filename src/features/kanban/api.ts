@@ -153,6 +153,16 @@ export async function updateColumnResetTarget(columnId: string, isResetTargetCol
   return throwIfError(result, 'Не вдалося оновити налаштування колонки.')
 }
 
+export async function updateColumnQplazeImport(columnId: string, isQplazeImportColumn: boolean): Promise<KanbanColumnRow> {
+  const result = await supabase
+    .from('kanban_columns')
+    .update({ is_qplaze_import_column: isQplazeImportColumn })
+    .eq('id', columnId)
+    .select('*')
+    .single()
+  return throwIfError(result, 'Не вдалося оновити налаштування колонки.')
+}
+
 export async function reorderColumn(columnId: string, position: number): Promise<void> {
   const { error } = await supabase.from('kanban_columns').update({ position }).eq('id', columnId)
   if (error) throw toAppError(error, 'Не вдалося змінити порядок колонок.')
@@ -266,6 +276,27 @@ export async function createLabel(boardId: string, name: string, color: string):
 export async function deleteLabel(labelId: string): Promise<void> {
   const { error } = await supabase.from('labels').delete().eq('id', labelId)
   if (error) throw toAppError(error, 'Не вдалося видалити мітку.')
+}
+
+export interface QplazeSyncResult {
+  found: number
+  created: number
+  updated: number
+  skipped: number
+  error_code: string | null
+}
+
+/**
+ * Calls the `qplaze-sync-trigger` edge function via `functions.invoke` (not a
+ * raw `fetch`) so the caller's Supabase session JWT is attached automatically
+ * — that function is deployed with normal JWT verification, unlike the
+ * Telegram/ICS functions. It bridges to a separate Node/Playwright worker
+ * that does the actual Kanboard scrape; this call can take a while.
+ */
+export async function triggerQplazeSync(): Promise<QplazeSyncResult> {
+  const { data, error } = await supabase.functions.invoke<QplazeSyncResult>('qplaze-sync-trigger')
+  if (error) throw toAppError(error, 'Не вдалося запустити синхронізацію Qplaze.')
+  return data ?? { found: 0, created: 0, updated: 0, skipped: 0, error_code: 'internal' }
 }
 
 export type { PriorityLevel }
