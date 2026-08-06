@@ -1,7 +1,7 @@
 # Official Playwright image: Chromium + all required OS deps preinstalled,
 # version-matched to the `playwright` npm package below — avoids the
 # fragility of `apt-get`/`playwright install --with-deps` in a slim base.
-FROM mcr.microsoft.com/playwright:v1.48.0-jammy
+FROM mcr.microsoft.com/playwright:v1.62.1-jammy
 
 # The base image ships Node 20, but @supabase/supabase-js's realtime client
 # throws synchronously at startup on Node <22 (no native WebSocket) even
