@@ -10,7 +10,7 @@
     "sync-once": "node -e \"import('./src/sync.js').then(m => m.runSync().then(r => { console.log(r); process.exit(0) }).catch(e => { console.error(e); process.exit(1) }))\""
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
