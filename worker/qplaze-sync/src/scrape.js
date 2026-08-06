@@ -138,14 +138,29 @@ async function extractCards(page) {
 
 /** Returns `{ sourceId, title, sourceUrl }[]`. Throws a SyncError (never a raw error) on any failure mode. */
 export async function scrapeBoard() {
-  const browser = await chromium.launch({ headless: true })
+  let browser
+  try {
+    // --no-sandbox is required for Chromium to launch in most containerized
+    // environments (Docker/Railway etc. don't grant the kernel privileges
+    // Chromium's sandbox normally needs) — the container itself provides
+    // the isolation instead.
+    browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
+  } catch (error) {
+    // Safe to log here specifically: nothing page-related has happened yet,
+    // so this can only be a browser-launch/environment problem (missing
+    // deps, sandbox restrictions), never real page content.
+    console.error('qplaze-sync-worker: chromium.launch failed', error instanceof Error ? error.message : '')
+    throw new SyncError(ERROR_CODES.INTERNAL)
+  }
+
   try {
     const page = await browser.newPage()
     await login(page)
     return await extractCards(page)
   } catch (error) {
-    // Never let Playwright's native error object escape this function — its
-    // .message can embed page/ARIA snapshot content (real card titles).
+    // Never let Playwright's native error object escape this function past
+    // this point — its .message can embed page/ARIA snapshot content (real
+    // card titles).
     if (error instanceof SyncError) throw error
     throw new SyncError(ERROR_CODES.INTERNAL)
   } finally {
