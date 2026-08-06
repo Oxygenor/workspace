@@ -2,6 +2,48 @@ import { config } from './config.js'
 import { ERROR_CODES, toSyncError } from './errors.js'
 import { scrapeBoard } from './scrape.js'
 import { supabase } from './supabaseClient.js'
+import { sendTelegramMessage } from './telegram.js'
+
+function formatMovedMessage(moved) {
+  if (moved.length === 1) {
+    const m = moved[0]
+    return `🔄 Вашу картку «${m.title}» перенесено з «${m.from_column}» у «${m.to_column}» (синхронізація Qplaze)`
+  }
+  const lines = ['🔄 Ваші картки перенесено (синхронізація Qplaze):']
+  for (const m of moved) {
+    lines.push(`• «${m.title}»: «${m.from_column}» → «${m.to_column}»`)
+  }
+  return lines.join('\n')
+}
+
+/** Notifies every workspace member with Telegram linked about cards that changed column this run. Best-effort — never throws. */
+async function notifyColumnMoves(moved) {
+  if (!Array.isArray(moved) || moved.length === 0) return
+  try {
+    const { data: members } = await supabase
+      .from('workspace_members')
+      .select('user_id')
+      .eq('workspace_id', config.workspaceId)
+    const userIds = (members ?? []).map((m) => m.user_id)
+    if (userIds.length === 0) return
+
+    const { data: integrations } = await supabase
+      .from('user_integrations')
+      .select('telegram_chat_id')
+      .in('user_id', userIds)
+      .not('telegram_chat_id', 'is', null)
+
+    const chatIds = (integrations ?? []).map((i) => i.telegram_chat_id).filter(Boolean)
+    if (chatIds.length === 0) return
+
+    const message = formatMovedMessage(moved)
+    for (const chatId of chatIds) {
+      await sendTelegramMessage(chatId, message)
+    }
+  } catch (error) {
+    console.error('qplaze-sync-worker: notifyColumnMoves failed', error instanceof Error ? error.message : '')
+  }
+}
 
 async function startRun() {
   const { data, error } = await supabase
@@ -96,6 +138,7 @@ export async function runSync() {
       skipped: applyResult.skipped ?? 0,
     }
     await finishRun(runId, 'success', counts, null)
+    await notifyColumnMoves(applyResult.moved)
     return { ...counts, error_code: null }
   } catch (error) {
     const syncError = toSyncError(error)

@@ -23,4 +23,7 @@ export const config = {
   workspaceId: process.env.WORKSPACE_ID,
   syncApiKey: process.env.SYNC_API_KEY,
   port: Number(process.env.PORT) || 8080,
+  // Optional: enables the "your card was moved" Telegram notification.
+  // Sync still works fine without it — the notification is just skipped.
+  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || '',
 }
