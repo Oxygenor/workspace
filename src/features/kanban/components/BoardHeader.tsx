@@ -15,7 +15,7 @@ import { useUpdateItemSettings } from '@/features/workspace-tree/hooks'
 import { useKanbanFiltersStore } from '@/stores/kanban-filters-store'
 import { t } from '@/i18n'
 import type { WorkspaceItemRow } from '@/types/database'
-import { useColumns, useTriggerQplazeSync } from '../hooks'
+import { useTriggerQplazeSync } from '../hooks'
 import { BoardFilters } from './BoardFilters'
 
 interface BoardHeaderProps {
@@ -30,9 +30,8 @@ export function BoardHeader({ item, selectMode, onToggleSelectMode }: BoardHeade
   const setSearch = useKanbanFiltersStore((s) => s.setSearch)
   const sort = useKanbanFiltersStore((s) => s.sortByBoard[item.id] ?? 'manual')
   const setSort = useKanbanFiltersStore((s) => s.setSort)
-  const { data: columns } = useColumns(item.id)
   const triggerQplazeSync = useTriggerQplazeSync(item.id)
-  const hasQplazeImportColumn = (columns ?? []).some((c) => c.is_qplaze_import_column)
+  const qplazeSyncEnabled = item.settings.qplazeSyncEnabled === true
 
   const description = typeof item.settings.description === 'string' ? item.settings.description : ''
   const [isEditingDescription, setIsEditingDescription] = useState(false)
@@ -79,6 +78,16 @@ export function BoardHeader({ item, selectMode, onToggleSelectMode }: BoardHeade
         />
       </div>
 
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm text-muted-foreground">{t.qplazeSync.enableForBoard}</span>
+        <Switch
+          checked={qplazeSyncEnabled}
+          onCheckedChange={(checked) =>
+            updateSettings.mutate({ itemId: item.id, settings: { ...item.settings, qplazeSyncEnabled: checked } })
+          }
+        />
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-48">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -92,7 +101,7 @@ export function BoardHeader({ item, selectMode, onToggleSelectMode }: BoardHeade
 
         <BoardFilters boardId={item.id} />
 
-        {hasQplazeImportColumn && (
+        {qplazeSyncEnabled && (
           <Button
             variant="outline"
             size="sm"

@@ -100,6 +100,14 @@ async function login(page) {
   }
 }
 
+/**
+ * Only cards assigned to the logged-in Qplaze account are synced — everyone
+ * else's cards on the shared board are left out entirely. Each returned
+ * card also carries its current Qplaze list id (`qplazeListId`) so the
+ * apply RPC can mirror it to the mapped local column on every run,
+ * including moving a previously-synced card if it was dragged to a
+ * different list on the Qplaze side since the last sync.
+ */
 async function extractCards(page) {
   await page.goto(config.qplazeBoardUrl, { waitUntil: 'domcontentloaded', timeout: NAV_TIMEOUT_MS })
 
@@ -126,7 +134,8 @@ async function extractCards(page) {
 
   const inertiaPage = await readInertiaPage(page)
   const lists = inertiaPage?.props?.board?.lists
-  if (!Array.isArray(lists)) {
+  const authUserId = inertiaPage?.props?.auth?.user?.id
+  if (!Array.isArray(lists) || authUserId == null) {
     throw new SyncError(ERROR_CODES.STRUCTURE_CHANGED)
   }
 
@@ -135,61 +144,20 @@ async function extractCards(page) {
     if (list?.is_archived || list?.is_archive) continue
     for (const card of list?.cards ?? []) {
       if (!card?.id || !card?.title || card?.is_archived) continue
+      const isMine = Array.isArray(card.assignees) && card.assignees.some((a) => a?.id === authUserId)
+      if (!isMine) continue
       cards.push({
         sourceId: String(card.id),
         title: card.title,
         sourceUrl: `${config.qplazeBoardUrl}#card-${card.id}`,
+        qplazeListId: String(list.id),
       })
     }
   }
   return cards
 }
 
-// TEMPORARY, for designing per-column sync + "my cards" filtering — remove
-// once confirmed. Deliberately omits titles/descriptions (only ids, list
-// names, and assignee/author fields) to keep exposure minimal while still
-// showing the real shape of these fields.
-export async function dumpStructure() {
-  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
-  try {
-    const page = await browser.newPage()
-    await login(page)
-    await page.goto(config.qplazeBoardUrl, { waitUntil: 'domcontentloaded', timeout: NAV_TIMEOUT_MS })
-    await page.waitForFunction(
-      () => {
-        const el = document.querySelector('[data-page]')
-        if (!el) return false
-        try {
-          const data = JSON.parse(el.getAttribute('data-page'))
-          return data?.component === 'Boards/Show' && Array.isArray(data?.props?.board?.lists)
-        } catch {
-          return false
-        }
-      },
-      { timeout: NAV_TIMEOUT_MS },
-    )
-    const inertiaPage = await readInertiaPage(page)
-    const authUser = inertiaPage?.props?.auth?.user
-    const lists = (inertiaPage?.props?.board?.lists ?? []).map((list) => ({
-      id: list.id,
-      name: list.name,
-      is_archived: list.is_archived,
-      is_archive: list.is_archive,
-      cards: (list.cards ?? []).map((c) => ({
-        id: c.id,
-        list_id: c.list_id,
-        author_id: c.author_id,
-        assignees: c.assignees,
-        is_archived: c.is_archived,
-      })),
-    }))
-    return { authUser, lists }
-  } finally {
-    await browser.close().catch(() => {})
-  }
-}
-
-/** Returns `{ sourceId, title, sourceUrl }[]`. Throws a SyncError (never a raw error) on any failure mode. */
+/** Returns `{ sourceId, title, sourceUrl, qplazeListId }[]` for cards assigned to the logged-in user. Throws a SyncError (never a raw error) on any failure mode. */
 export async function scrapeBoard() {
   let browser
   try {

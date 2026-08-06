@@ -31,7 +31,6 @@ import {
   updateColumnAutoArchive,
   updateColumnColor,
   updateColumnInProgress,
-  updateColumnQplazeImport,
   updateColumnResetTarget,
   updateColumnWipLimit,
 } from './api'
@@ -124,16 +123,6 @@ export function useUpdateColumnResetTarget(boardId: string) {
       queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) })
       queryClient.invalidateQueries({ queryKey: ['home', 'board-overview'] })
     },
-    onError: (error: Error) => toast.error(error.message),
-  })
-}
-
-export function useUpdateColumnQplazeImport(boardId: string) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ columnId, isQplazeImportColumn }: { columnId: string; isQplazeImportColumn: boolean }) =>
-      updateColumnQplazeImport(columnId, isQplazeImportColumn),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.kanbanColumns(boardId) }),
     onError: (error: Error) => toast.error(error.message),
   })
 }

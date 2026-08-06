@@ -62,7 +62,6 @@ export interface KanbanColumnRow extends Timestamped {
   auto_archive_days: number
   is_in_progress_column: boolean
   is_reset_target_column: boolean
-  is_qplaze_import_column: boolean
   archived_at: string | null
 }
 

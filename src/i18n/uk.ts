@@ -529,10 +529,7 @@ export const uk = {
     enable: 'Надсилати картки в бота (команда /board)',
   },
   qplazeSync: {
-    settingsTitle: 'Колонка для Qplaze',
-    enable: 'Приймати картки з Qplaze',
-    description: 'Нові картки, знайдені під час синхронізації з Qplaze, потрапляють у цю колонку. Наявні лише оновлюють назву — колонку їм більше ніхто не змінює.',
-    badgeTooltip: 'Сюди потрапляють нові картки з Qplaze',
+    enableForBoard: 'Синхронізувати цю дошку з Qplaze',
     syncButton: 'Синхронізувати Qplaze',
     syncing: 'Синхронізація...',
     resultPrefix: 'Синхронізацію Qplaze завершено:',
@@ -543,7 +540,7 @@ export const uk = {
     errorLoginFailed: 'Не вдалося увійти в Qplaze — перевірте обліковий запис',
     errorCaptchaDetected: 'Qplaze запросив додаткове підтвердження (CAPTCHA/2FA) — потрібне ручне втручання',
     errorStructureChanged: 'Структуру дошки Qplaze змінено — синхронізацію зупинено, щоб не створити помилкові дані',
-    errorNoTargetColumn: 'Не позначено колонку для нових карток з Qplaze',
+    errorNoTargetColumn: 'Не налаштовано відповідність колонок для Qplaze',
     errorInternal: 'Сталася помилка під час синхронізації Qplaze',
   },
   resetTargetColumn: {
