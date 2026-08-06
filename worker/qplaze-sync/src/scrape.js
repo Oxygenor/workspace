@@ -145,6 +145,50 @@ async function extractCards(page) {
   return cards
 }
 
+// TEMPORARY, for designing per-column sync + "my cards" filtering — remove
+// once confirmed. Deliberately omits titles/descriptions (only ids, list
+// names, and assignee/author fields) to keep exposure minimal while still
+// showing the real shape of these fields.
+export async function dumpStructure() {
+  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
+  try {
+    const page = await browser.newPage()
+    await login(page)
+    await page.goto(config.qplazeBoardUrl, { waitUntil: 'domcontentloaded', timeout: NAV_TIMEOUT_MS })
+    await page.waitForFunction(
+      () => {
+        const el = document.querySelector('[data-page]')
+        if (!el) return false
+        try {
+          const data = JSON.parse(el.getAttribute('data-page'))
+          return data?.component === 'Boards/Show' && Array.isArray(data?.props?.board?.lists)
+        } catch {
+          return false
+        }
+      },
+      { timeout: NAV_TIMEOUT_MS },
+    )
+    const inertiaPage = await readInertiaPage(page)
+    const authUser = inertiaPage?.props?.auth?.user
+    const lists = (inertiaPage?.props?.board?.lists ?? []).map((list) => ({
+      id: list.id,
+      name: list.name,
+      is_archived: list.is_archived,
+      is_archive: list.is_archive,
+      cards: (list.cards ?? []).map((c) => ({
+        id: c.id,
+        list_id: c.list_id,
+        author_id: c.author_id,
+        assignees: c.assignees,
+        is_archived: c.is_archived,
+      })),
+    }))
+    return { authUser, lists }
+  } finally {
+    await browser.close().catch(() => {})
+  }
+}
+
 /** Returns `{ sourceId, title, sourceUrl }[]`. Throws a SyncError (never a raw error) on any failure mode. */
 export async function scrapeBoard() {
   let browser
