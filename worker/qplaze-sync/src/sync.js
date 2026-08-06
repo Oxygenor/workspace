@@ -55,6 +55,15 @@ export async function runSync() {
   })
 
   if (lockError || !runToken) {
+    // PostgrestError.message/.code are safe to log (SQL/API diagnostics,
+    // never secrets) and are the only way to tell "already locked" apart
+    // from a real config/connectivity problem (bad workspace id, bad
+    // service-role key, etc.) without guessing.
+    if (lockError) {
+      console.error('qplaze-sync-worker: acquire_lock RPC error', lockError.code, lockError.message)
+    } else {
+      console.log('qplaze-sync-worker: lock already held (another sync in progress or recently ran)')
+    }
     return { found: 0, created: 0, updated: 0, skipped: 0, error_code: ERROR_CODES.LOCK_BUSY }
   }
 
@@ -81,6 +90,7 @@ export async function runSync() {
     })
 
     if (applyError) {
+      console.error('qplaze-sync-worker: apply_cards RPC error', applyError.code, applyError.message)
       await finishRun(runId, 'error', { found }, ERROR_CODES.INTERNAL)
       return { found, created: 0, updated: 0, skipped: 0, error_code: ERROR_CODES.INTERNAL }
     }
@@ -101,6 +111,12 @@ export async function runSync() {
     return { ...counts, error_code: null }
   } catch (error) {
     const syncError = toSyncError(error)
+    // Safe to log .message here specifically: by this point the only
+    // non-SyncError sources are this file's own thrown Errors (e.g.
+    // startRun's failure message) — scrapeBoard() already scrubs anything
+    // Playwright-originated (which can embed page content) before it gets
+    // this far, converting it into a SyncError first.
+    console.error('qplaze-sync-worker: run failed', syncError.code, error instanceof Error ? error.message : '')
     if (runId) await finishRun(runId, 'error', {}, syncError.code)
     return { found: 0, created: 0, updated: 0, skipped: 0, error_code: syncError.code }
   } finally {
