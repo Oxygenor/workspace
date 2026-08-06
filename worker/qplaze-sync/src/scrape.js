@@ -2,18 +2,17 @@ import { chromium } from 'playwright'
 import { config } from './config.js'
 import { ERROR_CODES, SyncError } from './errors.js'
 
-// Kanboard's standard (unthemed) markup — verified against the open-source
-// kanboard.org templates, not against this specific instance/theme, since
-// this worker was built without live access to kanboard.qplaze.com. If the
-// instance uses a custom theme or a newer/older Kanboard version, these may
-// need adjusting; keeping them as named constants here (rather than inline
-// throughout the function) makes that a small, contained edit.
+// This instance ("Qplaze KanBoard") is a custom Laravel + Inertia.js SPA —
+// NOT the open-source kanboard.org project despite the name. Confirmed via
+// a one-off debug dump (see git history for the temporary /debug-html
+// route): every Inertia page embeds a `data-page` attribute holding a JSON
+// blob of `{ component, props }` describing exactly what's rendered — this
+// is far more reliable than guessing CSS classes, since it's the app's own
+// routing state, not markup that a theme/version bump could silently change.
 const SELECTORS = {
-  usernameField: 'input[name="username"]',
-  passwordField: 'input[name="password"]',
-  loginSubmit: 'button[type="submit"], input[type="submit"]',
-  // Any of these present after a login attempt means "not actually logged in".
-  loginPageMarkers: ['input[name="username"]', 'input[name="password"]'],
+  usernameField: 'input#email, input[type="email"]',
+  passwordField: 'input#password, input[type="password"]',
+  loginSubmit: 'button[type="submit"]',
   captchaMarkers: [
     'iframe[src*="recaptcha"]',
     '[class*="captcha" i]',
@@ -21,16 +20,11 @@ const SELECTORS = {
     'input[name*="verification_code" i]',
     'input[autocomplete="one-time-code"]',
   ],
-  // Present only once actually logged in — used as a *positive* assertion,
-  // not just "absence of the login form" (a forced-password-change or ToS
-  // interstitial page would fail the negative check too, but isn't handled
-  // by it — waiting for a real logged-in-only element catches that case).
-  loggedInMarker: 'a[href*="logout"], .dropdown-menu, #board',
+  // TODO: unverified placeholders — extractCards()/scrapeBoard() (the real
+  // /sync path) isn't usable until these are fixed from a /debug-html dump
+  // of the actual board page. dumpBoardHtml() doesn't depend on these.
   boardColumn: '.board-column, [class*="column-container" i]',
-  // Primary: Kanboard renders each card as a link to its task page.
   taskLinkPrimary: 'a[href*="/task/"]',
-  // Fallback: some themes/versions render cards via a data attribute
-  // instead of (or in addition to) a plain anchor.
   taskLinkFallback: '[data-task-id]',
 }
 
@@ -44,11 +38,25 @@ async function detectCaptcha(page) {
   return false
 }
 
+/** Reads Inertia's own `data-page` prop blob — `null` if absent/unparseable (unexpected page structure). */
+async function readInertiaPage(page) {
+  return page.evaluate(() => {
+    const el = document.querySelector('[data-page]')
+    if (!el) return null
+    try {
+      return JSON.parse(el.getAttribute('data-page'))
+    } catch {
+      return null
+    }
+  })
+}
+
 async function isOnLoginPage(page) {
-  for (const selector of SELECTORS.loginPageMarkers) {
-    if (await page.locator(selector).count()) return true
-  }
-  return false
+  const inertiaPage = await readInertiaPage(page)
+  if (inertiaPage) return inertiaPage.component === 'Auth/Login'
+  // No Inertia data-page found at all — fall back to a DOM guess rather
+  // than assuming either state blindly.
+  return Boolean(await page.locator(SELECTORS.usernameField).count())
 }
 
 async function login(page) {
@@ -63,9 +71,12 @@ async function login(page) {
 
   const usernameField = page.locator(SELECTORS.usernameField).first()
   const passwordField = page.locator(SELECTORS.passwordField).first()
-  if (!(await usernameField.count()) || !(await passwordField.count())) {
-    // Neither logged in nor a recognizable login form — the page structure
-    // isn't what this scraper expects.
+  try {
+    // Inertia hydrates the login form client-side after domcontentloaded —
+    // wait for it rather than checking immediately (which races hydration).
+    await usernameField.waitFor({ timeout: LOGIN_TIMEOUT_MS })
+    await passwordField.waitFor({ timeout: LOGIN_TIMEOUT_MS })
+  } catch {
     throw new SyncError(ERROR_CODES.STRUCTURE_CHANGED)
   }
 
@@ -73,11 +84,25 @@ async function login(page) {
   await passwordField.fill(config.qplazePassword)
   await page.locator(SELECTORS.loginSubmit).first().click()
 
+  // Inertia does client-side routing via the History API on success, not a
+  // full page reload — waitForNavigation() would never fire. Poll the
+  // data-page component instead: it flips away from Auth/Login the moment
+  // Inertia swaps in the post-login page, success or redirect alike.
   try {
-    await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: LOGIN_TIMEOUT_MS })
+    await page.waitForFunction(
+      () => {
+        const el = document.querySelector('[data-page]')
+        if (!el) return false
+        try {
+          return JSON.parse(el.getAttribute('data-page'))?.component !== 'Auth/Login'
+        } catch {
+          return false
+        }
+      },
+      { timeout: LOGIN_TIMEOUT_MS },
+    )
   } catch {
-    // Some login flows update the page in place (no full navigation) — not
-    // fatal by itself, the checks below decide success/failure.
+    // Didn't flip within the timeout — treat as a failed login, checked below.
   }
 
   if (await detectCaptcha(page)) {
@@ -85,14 +110,6 @@ async function login(page) {
   }
 
   if (await isOnLoginPage(page)) {
-    throw new SyncError(ERROR_CODES.LOGIN_FAILED)
-  }
-
-  // Positive assertion: don't just infer success from "no login form" —
-  // wait for something that only exists once actually authenticated.
-  try {
-    await page.locator(SELECTORS.loggedInMarker).first().waitFor({ timeout: LOGIN_TIMEOUT_MS })
-  } catch {
     throw new SyncError(ERROR_CODES.LOGIN_FAILED)
   }
 }
@@ -137,9 +154,9 @@ async function extractCards(page) {
 }
 
 // TEMPORARY, for fixing SELECTORS against the real instance — remove once
-// scraping works reliably. Deliberately returns raw page HTML (unlike every
-// other function in this file), so only reachable via a bearer-protected
-// debug route, never logged/stored anywhere.
+// scraping works reliably. Deliberately returns raw page HTML/props (unlike
+// every other function in this file), so only reachable via a
+// bearer-protected debug route, never logged/stored anywhere.
 export async function dumpBoardHtml() {
   const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
   try {
@@ -151,10 +168,17 @@ export async function dumpBoardHtml() {
     } catch (loginError) {
       stage = `login-failed:${loginError instanceof SyncError ? loginError.code : 'unknown'}`
     }
+    const afterLoginInertiaPage = await readInertiaPage(page).catch(() => null)
+    const afterLoginUrl = page.url()
+
     await page.goto(config.qplazeBoardUrl, { waitUntil: 'domcontentloaded', timeout: NAV_TIMEOUT_MS }).catch(() => {})
+    // Give Inertia/Vue a moment to hydrate the board page's own data-page
+    // props before reading them.
+    await page.waitForTimeout(2000)
+    const boardInertiaPage = await readInertiaPage(page).catch(() => null)
     const html = await page.content()
     const url = page.url()
-    return { stage, url, html }
+    return { stage, afterLoginUrl, afterLoginInertiaPage, url, boardInertiaPage, html }
   } finally {
     await browser.close().catch(() => {})
   }
