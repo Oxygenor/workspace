@@ -5,10 +5,11 @@ import { ERROR_CODES, SyncError } from './errors.js'
 // This instance ("Qplaze KanBoard") is a custom Laravel + Inertia.js SPA —
 // NOT the open-source kanboard.org project despite the name. Confirmed via
 // a one-off debug dump (see git history for the temporary /debug-html
-// route): every Inertia page embeds a `data-page` attribute holding a JSON
-// blob of `{ component, props }` describing exactly what's rendered — this
-// is far more reliable than guessing CSS classes, since it's the app's own
-// routing state, not markup that a theme/version bump could silently change.
+// route, since removed): every Inertia page embeds a `data-page` attribute
+// holding a JSON blob of `{ component, props }` describing exactly what's
+// rendered — including, for the board page, the full `board.lists[].cards[]`
+// data directly as structured JSON. That's what extractCards() reads below;
+// no DOM/CSS scraping of card markup is needed at all.
 const SELECTORS = {
   usernameField: 'input#email, input[type="email"]',
   passwordField: 'input#password, input[type="password"]',
@@ -20,12 +21,6 @@ const SELECTORS = {
     'input[name*="verification_code" i]',
     'input[autocomplete="one-time-code"]',
   ],
-  // TODO: unverified placeholders — extractCards()/scrapeBoard() (the real
-  // /sync path) isn't usable until these are fixed from a /debug-html dump
-  // of the actual board page. dumpBoardHtml() doesn't depend on these.
-  boardColumn: '.board-column, [class*="column-container" i]',
-  taskLinkPrimary: 'a[href*="/task/"]',
-  taskLinkFallback: '[data-task-id]',
 }
 
 const NAV_TIMEOUT_MS = 30_000
@@ -85,31 +80,22 @@ async function login(page) {
   await page.locator(SELECTORS.loginSubmit).first().click()
 
   // Inertia does client-side routing via the History API on success, not a
-  // full page reload — waitForNavigation() would never fire. Poll the
-  // data-page component instead: it flips away from Auth/Login the moment
-  // Inertia swaps in the post-login page, success or redirect alike.
+  // full page reload — waitForNavigation() would never fire. The URL
+  // updates the instant a client-side visit lands, which is faster and
+  // race-free compared to re-reading the data-page DOM attribute (that can
+  // still show the old component for a moment after the URL has already
+  // changed, during the Vue re-render).
   try {
-    await page.waitForFunction(
-      () => {
-        const el = document.querySelector('[data-page]')
-        if (!el) return false
-        try {
-          return JSON.parse(el.getAttribute('data-page'))?.component !== 'Auth/Login'
-        } catch {
-          return false
-        }
-      },
-      { timeout: LOGIN_TIMEOUT_MS },
-    )
+    await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: LOGIN_TIMEOUT_MS })
   } catch {
-    // Didn't flip within the timeout — treat as a failed login, checked below.
+    // Didn't leave /login within the timeout — treat as a failed login, checked below.
   }
 
   if (await detectCaptcha(page)) {
     throw new SyncError(ERROR_CODES.CAPTCHA_DETECTED)
   }
 
-  if (await isOnLoginPage(page)) {
+  if (new URL(page.url()).pathname.startsWith('/login')) {
     throw new SyncError(ERROR_CODES.LOGIN_FAILED)
   }
 }
@@ -117,71 +103,46 @@ async function login(page) {
 async function extractCards(page) {
   await page.goto(config.qplazeBoardUrl, { waitUntil: 'domcontentloaded', timeout: NAV_TIMEOUT_MS })
 
+  // Vue/Inertia hydration can lag slightly behind domcontentloaded — poll
+  // for the board's own props (not just any data-page attribute) rather
+  // than reading immediately.
   try {
-    await page.locator(SELECTORS.boardColumn).first().waitFor({ timeout: NAV_TIMEOUT_MS })
+    await page.waitForFunction(
+      () => {
+        const el = document.querySelector('[data-page]')
+        if (!el) return false
+        try {
+          const data = JSON.parse(el.getAttribute('data-page'))
+          return data?.component === 'Boards/Show' && Array.isArray(data?.props?.board?.lists)
+        } catch {
+          return false
+        }
+      },
+      { timeout: NAV_TIMEOUT_MS },
+    )
   } catch {
     throw new SyncError(ERROR_CODES.STRUCTURE_CHANGED)
   }
 
-  const cards = await page.evaluate((sel) => {
-    const seen = new Map()
-
-    for (const el of document.querySelectorAll(sel.taskLinkPrimary)) {
-      const href = el.getAttribute('href') || ''
-      const match = href.match(/\/task\/(\d+)/)
-      if (!match) continue
-      const sourceId = match[1]
-      const title = (el.textContent || '').trim()
-      if (!title) continue
-      seen.set(sourceId, { sourceId, title, sourceUrl: new URL(href, window.location.href).toString() })
-    }
-
-    for (const el of document.querySelectorAll(sel.taskLinkFallback)) {
-      const sourceId = el.getAttribute('data-task-id')
-      if (!sourceId || seen.has(sourceId)) continue
-      const linkEl = el.matches('a') ? el : el.querySelector('a')
-      const title = (linkEl ? linkEl.textContent : el.textContent || '').trim()
-      if (!title) continue
-      const href = linkEl ? linkEl.getAttribute('href') : null
-      const sourceUrl = href ? new URL(href, window.location.href).toString() : window.location.href
-      seen.set(sourceId, { sourceId, title, sourceUrl })
-    }
-
-    return Array.from(seen.values())
-  }, SELECTORS)
-
-  return cards
-}
-
-// TEMPORARY, for fixing SELECTORS against the real instance — remove once
-// scraping works reliably. Deliberately returns raw page HTML/props (unlike
-// every other function in this file), so only reachable via a
-// bearer-protected debug route, never logged/stored anywhere.
-export async function dumpBoardHtml() {
-  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
-  try {
-    const page = await browser.newPage()
-    let stage = 'before-login'
-    try {
-      await login(page)
-      stage = 'after-login'
-    } catch (loginError) {
-      stage = `login-failed:${loginError instanceof SyncError ? loginError.code : 'unknown'}`
-    }
-    const afterLoginInertiaPage = await readInertiaPage(page).catch(() => null)
-    const afterLoginUrl = page.url()
-
-    await page.goto(config.qplazeBoardUrl, { waitUntil: 'domcontentloaded', timeout: NAV_TIMEOUT_MS }).catch(() => {})
-    // Give Inertia/Vue a moment to hydrate the board page's own data-page
-    // props before reading them.
-    await page.waitForTimeout(2000)
-    const boardInertiaPage = await readInertiaPage(page).catch(() => null)
-    const html = await page.content()
-    const url = page.url()
-    return { stage, afterLoginUrl, afterLoginInertiaPage, url, boardInertiaPage, html }
-  } finally {
-    await browser.close().catch(() => {})
+  const inertiaPage = await readInertiaPage(page)
+  const lists = inertiaPage?.props?.board?.lists
+  if (!Array.isArray(lists)) {
+    throw new SyncError(ERROR_CODES.STRUCTURE_CHANGED)
   }
+
+  const cards = []
+  for (const list of lists) {
+    if (list?.is_archived || list?.is_archive) continue
+    for (const card of list?.cards ?? []) {
+      if (!card?.id || !card?.title || card?.is_archived) continue
+      cards.push({
+        sourceId: String(card.id),
+        title: card.title,
+        sourceUrl: `${config.qplazeBoardUrl}#card-${card.id}`,
+      })
+    }
+  }
+  return cards
 }
 
 /** Returns `{ sourceId, title, sourceUrl }[]`. Throws a SyncError (never a raw error) on any failure mode. */

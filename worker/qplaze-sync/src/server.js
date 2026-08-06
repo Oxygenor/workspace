@@ -1,7 +1,6 @@
 import crypto from 'node:crypto'
 import express from 'express'
 import { config } from './config.js'
-import { dumpBoardHtml } from './scrape.js'
 import { runSync } from './sync.js'
 
 const app = express()
@@ -60,19 +59,6 @@ app.post('/sync', async (req, res) => {
     // runSync() is designed to never throw (it catches internally and
     // returns an error_code) — this is a last-resort guard only.
     console.error('qplaze-sync-worker: unexpected /sync failure')
-    res.status(500).json({ error_code: 'internal' })
-  }
-})
-
-// TEMPORARY debug route — remove once scrape.js's SELECTORS are confirmed
-// working against the real Kanboard instance. Returns raw page HTML, so
-// it's bearer-protected same as /sync, but must not stay in production.
-app.get('/debug-html', async (req, res) => {
-  if (!checkAuth(req, res)) return
-  try {
-    const result = await dumpBoardHtml()
-    res.status(200).json(result)
-  } catch {
     res.status(500).json({ error_code: 'internal' })
   }
 })
