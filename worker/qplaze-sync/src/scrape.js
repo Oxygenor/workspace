@@ -214,13 +214,38 @@ export async function dumpProjectInfo() {
       .catch(() => {})
     const vaultPage = await readInertiaPage(page)
 
+    // /vault turned out to be a general credentials store, not the GitLab
+    // system — try the board's edit page next (settings forms often expose
+    // fields absent from the read-only show view).
+    const editUrl = new URL('/boards/2/edit', config.qplazeBoardUrl).toString()
+    await page.goto(editUrl, { waitUntil: 'domcontentloaded', timeout: NAV_TIMEOUT_MS })
+    await page
+      .waitForFunction(
+        () => {
+          const el = document.querySelector('[data-page]')
+          if (!el) return false
+          try {
+            return Boolean(JSON.parse(el.getAttribute('data-page'))?.component)
+          } catch {
+            return false
+          }
+        },
+        { timeout: NAV_TIMEOUT_MS },
+      )
+      .catch(() => {})
+    const editPage = await readInertiaPage(page)
+    const editBoard = editPage?.props?.board ?? null
+    const editBoardMeta = editBoard ? Object.fromEntries(Object.entries(editBoard).filter(([key]) => key !== 'lists')) : null
+
     return {
       boardMeta,
       navLinks,
       topLevelPropKeys: Object.keys(inertiaPage?.props ?? {}),
       vaultComponent: vaultPage?.component ?? null,
       vaultPropKeys: Object.keys(vaultPage?.props ?? {}),
-      vaultProps: vaultPage?.props ?? null,
+      editComponent: editPage?.component ?? null,
+      editPropKeys: Object.keys(editPage?.props ?? {}),
+      editBoardMeta,
     }
   } finally {
     await browser.close().catch(() => {})
