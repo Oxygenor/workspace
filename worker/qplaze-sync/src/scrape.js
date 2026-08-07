@@ -194,7 +194,34 @@ export async function dumpProjectInfo() {
       return Array.from(seen.entries()).map(([href, text]) => ({ href, text }))
     })
 
-    return { boardMeta, navLinks, topLevelPropKeys: Object.keys(inertiaPage?.props ?? {}) }
+    // The "Доступи" (Access) nav link points at /vault — almost certainly
+    // the GitLab-access system from the announcement. Visit it too.
+    const vaultUrl = new URL('/vault', config.qplazeBoardUrl).toString()
+    await page.goto(vaultUrl, { waitUntil: 'domcontentloaded', timeout: NAV_TIMEOUT_MS })
+    await page
+      .waitForFunction(
+        () => {
+          const el = document.querySelector('[data-page]')
+          if (!el) return false
+          try {
+            return Boolean(JSON.parse(el.getAttribute('data-page'))?.component)
+          } catch {
+            return false
+          }
+        },
+        { timeout: NAV_TIMEOUT_MS },
+      )
+      .catch(() => {})
+    const vaultPage = await readInertiaPage(page)
+
+    return {
+      boardMeta,
+      navLinks,
+      topLevelPropKeys: Object.keys(inertiaPage?.props ?? {}),
+      vaultComponent: vaultPage?.component ?? null,
+      vaultPropKeys: Object.keys(vaultPage?.props ?? {}),
+      vaultProps: vaultPage?.props ?? null,
+    }
   } finally {
     await browser.close().catch(() => {})
   }
