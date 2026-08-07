@@ -157,6 +157,49 @@ async function extractCards(page) {
   return cards
 }
 
+// TEMPORARY, purely for research (is there a distinct "project ↔ GitLab
+// repo" entity in this app, separate from boards?) — remove after use.
+// Omits card titles/lists entirely; only board metadata + nav link hrefs/text.
+export async function dumpProjectInfo() {
+  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
+  try {
+    const page = await browser.newPage()
+    await login(page)
+    await page.goto(config.qplazeBoardUrl, { waitUntil: 'domcontentloaded', timeout: NAV_TIMEOUT_MS })
+    await page.waitForFunction(
+      () => {
+        const el = document.querySelector('[data-page]')
+        if (!el) return false
+        try {
+          const data = JSON.parse(el.getAttribute('data-page'))
+          return data?.component === 'Boards/Show' && Array.isArray(data?.props?.board?.lists)
+        } catch {
+          return false
+        }
+      },
+      { timeout: NAV_TIMEOUT_MS },
+    )
+    const inertiaPage = await readInertiaPage(page)
+    const board = inertiaPage?.props?.board ?? {}
+    const boardMeta = Object.fromEntries(Object.entries(board).filter(([key]) => key !== 'lists'))
+
+    const navLinks = await page.evaluate(() => {
+      const seen = new Map()
+      for (const a of document.querySelectorAll('a[href]')) {
+        const href = a.getAttribute('href') || ''
+        const text = (a.textContent || '').trim().slice(0, 60)
+        if (!href || href.startsWith('#')) continue
+        seen.set(href, text)
+      }
+      return Array.from(seen.entries()).map(([href, text]) => ({ href, text }))
+    })
+
+    return { boardMeta, navLinks, topLevelPropKeys: Object.keys(inertiaPage?.props ?? {}) }
+  } finally {
+    await browser.close().catch(() => {})
+  }
+}
+
 /** Returns `{ sourceId, title, sourceUrl, qplazeListId }[]` for cards assigned to the logged-in user. Throws a SyncError (never a raw error) on any failure mode. */
 export async function scrapeBoard() {
   let browser

@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import express from 'express'
 import { config } from './config.js'
+import { dumpProjectInfo } from './scrape.js'
 import { runSync } from './sync.js'
 
 const app = express()
@@ -59,6 +60,17 @@ app.post('/sync', async (req, res) => {
     // runSync() is designed to never throw (it catches internally and
     // returns an error_code) — this is a last-resort guard only.
     console.error('qplaze-sync-worker: unexpected /sync failure')
+    res.status(500).json({ error_code: 'internal' })
+  }
+})
+
+// TEMPORARY debug route — research only, remove after use.
+app.get('/debug-projects', async (req, res) => {
+  if (!checkAuth(req, res)) return
+  try {
+    const result = await dumpProjectInfo()
+    res.status(200).json(result)
+  } catch {
     res.status(500).json({ error_code: 'internal' })
   }
 })
